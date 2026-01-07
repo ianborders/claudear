@@ -295,11 +295,11 @@ class TaskManager:
             context = active_task.context
             context.state_machine.complete()
 
-            # Remove from active tasks immediately to prevent race conditions
-            del self._active_tasks[issue_id]
+            # Update store FIRST while still holding lock to prevent race with delayed webhooks
+            await self.store.update_state(issue_id, TaskState.COMPLETED)
 
-        # Update store
-        await self.store.update_state(issue_id, TaskState.COMPLETED)
+            # Then remove from active tasks
+            del self._active_tasks[issue_id]
 
         try:
             # 1. Push to GitHub
