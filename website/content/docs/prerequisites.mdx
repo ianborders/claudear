@@ -1,0 +1,175 @@
+---
+title: Prerequisites
+description: What you need before installing Claudear
+section: Setup
+order: 8
+---
+
+# Prerequisites
+
+Before installing Claudear, ensure you have the following set up on your system.
+
+## Required Software
+
+### Python 3.10+
+
+Claudear requires Python 3.10 or higher.
+
+```bash
+python3 --version
+# Should output: Python 3.10.x or higher
+```
+
+**Installation:**
+- macOS: `brew install python@3.12`
+- Ubuntu: `sudo apt install python3.12`
+- Windows: Download from [python.org](https://python.org)
+
+### Claude Code CLI
+
+Claudear uses Claude Code to implement tasks. You need:
+
+1. Claude Code CLI installed
+2. Active Claude subscription (Pro or Team)
+3. Authenticated session
+
+**Install:**
+```bash
+npm install -g @anthropic-ai/claude-code
+```
+
+**Authenticate:**
+```bash
+claude auth login
+```
+
+**Verify:**
+```bash
+claude whoami
+```
+
+### GitHub CLI
+
+For PR creation, Claudear uses the GitHub CLI.
+
+**Install:**
+```bash
+# macOS
+brew install gh
+
+# Ubuntu
+sudo apt install gh
+
+# Windows
+winget install GitHub.cli
+```
+
+**Authenticate:**
+```bash
+gh auth login
+```
+
+**Verify:**
+```bash
+gh auth status
+```
+
+### Git
+
+Git 2.20+ with worktree support.
+
+```bash
+git --version
+# Should output: git version 2.20.0 or higher
+```
+
+## Service Accounts
+
+### Linear API Key
+
+1. Go to Linear Settings → API
+2. Click "Create new API key"
+3. Name it "Claudear"
+4. Copy the key (starts with `lin_api_`)
+
+**Permissions needed:**
+- Read/write issues
+- Read/write comments
+- Read workflow states
+
+### ngrok Account
+
+ngrok provides a public URL for your local webhook server.
+
+1. Sign up at [ngrok.com](https://ngrok.com)
+2. Go to Your Authtoken
+3. Copy your auth token
+
+**Free tier** is sufficient for personal use.
+
+## Repository Requirements
+
+Your target repository should:
+
+- Be a git repository
+- Have a `main` or `master` branch
+- Be accessible to Claude Code
+- Have CI/CD set up (optional but recommended)
+
+### Recommended Repository Setup
+
+```bash
+# Ensure remote is configured
+git remote -v
+
+# Ensure main branch exists
+git branch -a | grep main
+
+# Ensure clean working tree
+git status
+```
+
+## System Requirements
+
+| Resource | Minimum | Recommended |
+|----------|---------|-------------|
+| RAM | 4 GB | 8 GB+ |
+| Disk | 10 GB free | 20 GB+ free |
+| CPU | 2 cores | 4 cores+ |
+
+Each concurrent task uses a separate worktree, so disk space scales with `MAX_CONCURRENT_TASKS`.
+
+## Network Requirements
+
+- **Outbound HTTPS** to:
+  - `api.linear.app`
+  - `api.anthropic.com`
+  - `api.github.com`
+  - `ngrok.io`
+
+- **Inbound HTTPS** via ngrok tunnel
+
+## Quick Checklist
+
+```bash
+# Run these commands to verify your setup
+
+# Python
+python3 --version
+
+# Claude Code
+claude --version
+claude whoami
+
+# GitHub CLI
+gh --version
+gh auth status
+
+# Git
+git --version
+
+# ngrok (optional - Claudear handles this)
+ngrok --version
+```
+
+All commands should succeed without errors before proceeding to [Quick Start](/docs/quickstart).

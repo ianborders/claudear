@@ -1,0 +1,69 @@
+---
+title: Quick Start
+description: Get Claudear running in under 5 minutes
+section: Getting Started
+order: 2
+---
+
+# Quick Start
+
+Get Claudear running in under 5 minutes with this quick setup guide.
+
+## 1. Install Claudear
+
+```bash
+pip install claudear
+```
+
+## 2. Create Configuration
+
+Create a `.env` file in your project directory:
+
+```bash
+# Linear Integration
+LINEAR_API_KEY=lin_api_xxxxxxxxxxxxx
+LINEAR_WEBHOOK_SECRET=your-webhook-secret
+LINEAR_TEAM_ID=your-team-uuid
+
+# Linear Workflow States (customize to match your board)
+LINEAR_STATE_TODO=Todo
+LINEAR_STATE_IN_PROGRESS=In Progress
+LINEAR_STATE_IN_REVIEW=In Review
+LINEAR_STATE_DONE=Done
+
+# Repository
+REPO_PATH=/path/to/your/repo
+
+# ngrok (for webhook tunneling)
+NGROK_AUTHTOKEN=your-ngrok-token
+```
+
+## 3. Start Claudear
+
+```bash
+claudear
+```
+
+Claudear will:
+1. Start the webhook server on port 8000
+2. Create an ngrok tunnel
+3. Register the webhook with Linear (first run only)
+4. Begin listening for issue updates
+
+## 4. Test It
+
+1. Go to your Linear board
+2. Move any issue from **Backlog** to **Todo**
+3. Watch Claudear pick up the task!
+
+You'll see output in your terminal as Claude Code:
+- Creates a worktree for the issue
+- Analyzes the requirements
+- Implements the solution
+- Creates a PR
+
+## Next Steps
+
+- [Configuration](/docs/configuration) - Full environment variable reference
+- [How It Works](/docs/workflow) - Understand the task lifecycle
+- [Linear Setup](/docs/linear-webhook) - Detailed webhook configuration

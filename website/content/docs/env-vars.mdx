@@ -1,0 +1,119 @@
+---
+title: Environment Variables
+description: Complete reference of all environment variables
+section: Reference
+order: 10
+---
+
+# Environment Variables
+
+Complete reference of all environment variables supported by Claudear.
+
+## Linear Integration
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `LINEAR_API_KEY` | Yes | - | Linear API key for authentication |
+| `LINEAR_WEBHOOK_SECRET` | Yes | - | Secret for webhook signature verification |
+| `LINEAR_TEAM_ID` | Yes | - | UUID of your Linear team |
+| `LINEAR_STATE_TODO` | No | `Todo` | State name that triggers task pickup |
+| `LINEAR_STATE_IN_PROGRESS` | No | `In Progress` | State name while working |
+| `LINEAR_STATE_IN_REVIEW` | No | `In Review` | State name after PR creation |
+| `LINEAR_STATE_DONE` | No | `Done` | State name for completion |
+
+## Repository
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `REPO_PATH` | Yes | - | Absolute path to git repository |
+| `WORKTREES_DIR` | No | `{REPO_PATH}/.worktrees` | Directory for git worktrees |
+| `BASE_BRANCH` | No | `main` | Branch to create PRs against |
+
+## Server
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `WEBHOOK_PORT` | No | `8000` | Port for webhook server |
+| `WEBHOOK_HOST` | No | `0.0.0.0` | Host to bind server to |
+
+## ngrok
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `NGROK_AUTHTOKEN` | No | - | ngrok auth token for tunneling |
+
+## Task Management
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `MAX_CONCURRENT_TASKS` | No | `5` | Maximum parallel tasks |
+| `COMMENT_POLL_INTERVAL` | No | `30` | Seconds between comment polls |
+| `BLOCKED_TIMEOUT` | No | `3600` | Seconds before blocked task times out |
+| `TASK_TIMEOUT` | No | `7200` | Maximum seconds for a single task |
+
+## Claude Code
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `CLAUDE_MODEL` | No | (default) | Model to use for Claude Code |
+| `CLAUDE_MAX_TOKENS` | No | (default) | Max tokens per response |
+
+## Database
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DATABASE_PATH` | No | `claudear.db` | Path to SQLite database |
+
+## Logging
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `LOG_LEVEL` | No | `INFO` | Logging level |
+| `LOG_FORMAT` | No | `text` | Log format (`text` or `json`) |
+| `LOG_FILE` | No | - | File to write logs (optional) |
+
+## Example .env File
+
+```bash
+# Required
+LINEAR_API_KEY=lin_api_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+LINEAR_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+LINEAR_TEAM_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+REPO_PATH=/Users/yourname/projects/myapp
+
+# Optional - Linear States
+LINEAR_STATE_TODO=Todo
+LINEAR_STATE_IN_PROGRESS=In Progress
+LINEAR_STATE_IN_REVIEW=In Review
+LINEAR_STATE_DONE=Done
+
+# Optional - Server
+WEBHOOK_PORT=8000
+
+# Optional - ngrok
+NGROK_AUTHTOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# Optional - Task Management
+MAX_CONCURRENT_TASKS=3
+BLOCKED_TIMEOUT=7200
+TASK_TIMEOUT=14400
+
+# Optional - Logging
+LOG_LEVEL=INFO
+```
+
+## Environment Variable Priority
+
+Variables are loaded in this order (later overrides earlier):
+
+1. System environment variables
+2. `.env` file in current directory
+3. `.env` file in `~/.config/claudear/`
+4. Command-line arguments
+
+## Security Notes
+
+- Never commit `.env` files to version control
+- Use secrets management in production
+- Rotate API keys periodically
+- Limit API key permissions to minimum required

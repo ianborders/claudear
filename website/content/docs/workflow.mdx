@@ -1,0 +1,109 @@
+---
+title: Task Workflow
+description: Understanding the Claudear task lifecycle
+section: How It Works
+order: 4
+---
+
+# Task Workflow
+
+Claudear manages tasks through a state machine that mirrors your Linear workflow. Understanding this lifecycle helps you work effectively with automated development.
+
+## State Machine
+
+```
+PENDING → IN_PROGRESS ⟷ BLOCKED → FAILED
+              ↓
+         COMPLETED → IN_REVIEW → DONE
+```
+
+### States
+
+| State | Linear State | Description |
+|-------|--------------|-------------|
+| `PENDING` | Todo | Issue picked up, waiting to start |
+| `IN_PROGRESS` | In Progress | Claude is actively working |
+| `BLOCKED` | In Progress | Claude needs human input |
+| `COMPLETED` | In Progress | Work done, pushing code |
+| `IN_REVIEW` | In Review | PR created, awaiting review |
+| `DONE` | Done | Merged and cleaned up |
+| `FAILED` | (varies) | Task failed (terminal) |
+
+## Lifecycle Flow
+
+### 1. Task Pickup (PENDING)
+
+When you move a Linear issue to "Todo":
+
+1. Webhook receives the state change event
+2. Claudear verifies it's a Todo state
+3. Task record created in SQLite
+4. Task enters `PENDING` state
+
+### 2. Starting Work (IN_PROGRESS)
+
+Claudear then:
+
+1. Creates a git worktree at `.worktrees/{issue-identifier}`
+2. Creates branch `claudear/{issue-identifier}`
+3. Moves Linear issue to "In Progress"
+4. Starts Claude Code session with the task prompt
+
+### 3. Working
+
+Claude Code:
+
+1. Analyzes the issue title and description
+2. Explores the codebase
+3. Implements the solution
+4. Writes/updates tests
+5. Commits changes
+
+### 4. Blocked (BLOCKED)
+
+If Claude encounters an issue:
+
+1. Outputs `BLOCKED: [reason]`
+2. Claudear detects the blocked state
+3. Posts a comment to Linear asking for help
+4. Polls for new comments
+5. When you reply, Claude resumes
+
+### 5. Completion (COMPLETED → IN_REVIEW)
+
+When Claude outputs `TASK_COMPLETE`:
+
+1. Pushes branch to origin
+2. Creates PR via `gh pr create`
+3. Posts PR link to Linear issue
+4. Moves issue to "In Review"
+
+### 6. Merging (DONE)
+
+When you move the issue to "Done":
+
+1. PR is merged (if not already)
+2. Worktree is cleaned up
+3. Branch is optionally deleted
+4. Task marked as `DONE`
+
+## Timeouts
+
+| Situation | Default | Configuration |
+|-----------|---------|---------------|
+| Blocked timeout | 1 hour | `BLOCKED_TIMEOUT` |
+| Task stall detection | 5 minutes | Built-in |
+
+## Error Handling
+
+If a task fails:
+
+- Error is logged
+- Linear issue gets a comment with the error
+- Task enters `FAILED` state
+- Worktree is preserved for debugging
+
+To retry a failed task:
+1. Fix the underlying issue
+2. Move the Linear issue back to "Backlog"
+3. Move it to "Todo" again

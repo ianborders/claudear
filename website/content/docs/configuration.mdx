@@ -1,0 +1,118 @@
+---
+title: Configuration
+description: Complete environment variable reference
+section: Getting Started
+order: 3
+---
+
+# Configuration
+
+Claudear is configured via environment variables. Create a `.env` file in your project root or set them in your shell.
+
+## Required Variables
+
+### Linear Integration
+
+| Variable | Description |
+|----------|-------------|
+| `LINEAR_API_KEY` | Your Linear API key. Get it from Linear Settings → API |
+| `LINEAR_WEBHOOK_SECRET` | Secret for webhook signature verification |
+| `LINEAR_TEAM_ID` | UUID of your Linear team |
+
+### Linear Workflow States
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LINEAR_STATE_TODO` | `Todo` | State that triggers task pickup |
+| `LINEAR_STATE_IN_PROGRESS` | `In Progress` | State while Claude is working |
+| `LINEAR_STATE_IN_REVIEW` | `In Review` | State after PR is created |
+| `LINEAR_STATE_DONE` | `Done` | Terminal state (triggers cleanup) |
+
+### Repository
+
+| Variable | Description |
+|----------|-------------|
+| `REPO_PATH` | Absolute path to your git repository |
+
+## Optional Variables
+
+### Server Settings
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `WEBHOOK_PORT` | `8000` | Port for the webhook server |
+| `WEBHOOK_HOST` | `0.0.0.0` | Host to bind the server |
+
+### ngrok
+
+| Variable | Description |
+|----------|-------------|
+| `NGROK_AUTHTOKEN` | Your ngrok auth token for tunneling |
+
+### Task Settings
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MAX_CONCURRENT_TASKS` | `5` | Max parallel tasks |
+| `COMMENT_POLL_INTERVAL` | `30` | Seconds between polling for comments |
+| `BLOCKED_TIMEOUT` | `3600` | Seconds before a blocked task times out |
+
+### Worktrees
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `WORKTREES_DIR` | `{REPO_PATH}/.worktrees` | Directory for git worktrees |
+
+### Logging
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LOG_LEVEL` | `INFO` | Logging level (DEBUG, INFO, WARNING, ERROR) |
+
+## Example Configuration
+
+```bash
+# .env file
+
+# Linear Integration
+LINEAR_API_KEY=lin_api_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+LINEAR_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+LINEAR_TEAM_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+
+# Workflow States
+LINEAR_STATE_TODO=Todo
+LINEAR_STATE_IN_PROGRESS=In Progress
+LINEAR_STATE_IN_REVIEW=In Review
+LINEAR_STATE_DONE=Done
+
+# Repository
+REPO_PATH=/Users/yourname/projects/myapp
+
+# ngrok
+NGROK_AUTHTOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# Task Settings
+MAX_CONCURRENT_TASKS=3
+BLOCKED_TIMEOUT=7200
+
+# Logging
+LOG_LEVEL=INFO
+```
+
+## Getting Your Linear API Key
+
+1. Go to Linear Settings
+2. Navigate to **API** section
+3. Click **Create new API key**
+4. Give it a name like "Claudear"
+5. Copy the key (starts with `lin_api_`)
+
+## Generating a Webhook Secret
+
+Generate a secure random string for your webhook secret:
+
+```bash
+openssl rand -hex 32
+```
+
+Use this value for both `LINEAR_WEBHOOK_SECRET` and when registering the webhook in Linear.

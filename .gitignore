@@ -58,3 +58,9 @@ ngrok.yml
 # OS
 .DS_Store
 Thumbs.db
+
+# Website (Next.js)
+website/node_modules/
+website/.next/
+website/out/
+!website/lib/

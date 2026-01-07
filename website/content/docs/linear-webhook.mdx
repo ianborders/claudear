@@ -1,0 +1,119 @@
+---
+title: Linear Webhook Setup
+description: Configure Linear webhooks for Claudear
+section: Setup
+order: 5
+---
+
+# Linear Webhook Setup
+
+Claudear uses Linear webhooks to receive real-time notifications when issues change state. This guide covers manual webhook setup if automatic registration doesn't work.
+
+## Automatic Registration
+
+When you run `claudear` for the first time, it automatically:
+
+1. Starts an ngrok tunnel
+2. Registers a webhook with Linear
+3. Saves the webhook ID for future use
+
+You'll see output like:
+
+```
+[INFO] ngrok tunnel established: https://abc123.ngrok.io
+[INFO] Registering webhook with Linear...
+[INFO] Webhook registered successfully
+```
+
+## Manual Registration
+
+If automatic registration fails, you can register manually:
+
+### 1. Get Your Webhook URL
+
+Start Claudear to get your ngrok URL:
+
+```bash
+claudear
+```
+
+Note the URL (e.g., `https://abc123.ngrok.io`)
+
+### 2. Create Webhook in Linear
+
+1. Go to **Linear Settings → API → Webhooks**
+2. Click **New webhook**
+3. Configure:
+   - **Label**: Claudear
+   - **URL**: `https://your-ngrok-url.ngrok.io/webhooks/linear`
+   - **Team**: Select your team
+   - **Data change events**: Enable "Issues"
+
+### 3. Set the Secret
+
+1. Generate a secret: `openssl rand -hex 32`
+2. Enter it in Linear's webhook settings
+3. Add it to your `.env`:
+
+```bash
+LINEAR_WEBHOOK_SECRET=your-generated-secret
+```
+
+## Webhook Events
+
+Claudear listens for these events:
+
+| Event | Action |
+|-------|--------|
+| Issue → Todo | Start new task |
+| Issue → In Progress | (from Claudear) |
+| Issue → In Review | (from Claudear) |
+| Issue → Done | Trigger cleanup/merge |
+| New Comment | Check for unblock input |
+
+## Testing the Webhook
+
+### Using the Test Endpoint
+
+```bash
+curl https://your-ngrok-url.ngrok.io/webhooks/linear/test
+```
+
+Should return:
+```json
+{"status": "ok", "message": "Webhook endpoint is reachable"}
+```
+
+### Using Linear's Test Feature
+
+1. In Linear webhook settings, click **Test**
+2. Check Claudear logs for the incoming event
+
+## Troubleshooting
+
+### Webhook Not Receiving Events
+
+1. **Check ngrok is running**: Look for the tunnel URL in logs
+2. **Verify URL is correct**: Must include `/webhooks/linear` path
+3. **Check team ID**: Webhook must be for the correct team
+
+### Signature Verification Failed
+
+1. **Verify secret matches**: Same value in Linear and `.env`
+2. **No extra whitespace**: Copy the secret exactly
+3. **Regenerate if needed**: Create a new secret in both places
+
+### Events Delayed
+
+Linear webhooks are near-instant, but if delayed:
+
+1. Check Linear's status page
+2. Verify ngrok tunnel is stable
+3. Check for rate limiting
+
+## Security Notes
+
+- Always use HTTPS (ngrok provides this)
+- Keep your webhook secret secure
+- Rotate secrets periodically
+- Monitor webhook logs for unusual activity

@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fafafa;
+  --foreground: #0f172a;
+  --brand-cyan: #22d3ee;
+  --brand-emerald: #10b981;
+  --brand-indigo: #6366f1;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-brand-cyan: var(--brand-cyan);
+  --color-brand-emerald: var(--brand-emerald);
+  --color-brand-indigo: var(--brand-indigo);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-space-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  letter-spacing: -0.02em;
+}
+
+/* Component Styles */
+.glass-panel {
+  border-radius: 1.5rem;
+  border: 1px solid rgba(203, 213, 225, 0.7);
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 25px 50px -12px rgba(148, 163, 184, 0.4);
+  backdrop-filter: blur(8px);
+}
+
+.metric-tile {
+  border-radius: 1rem;
+  border: 1px solid rgb(203, 213, 225);
+  background: rgba(255, 255, 255, 0.7);
+  padding: 1rem 1.25rem;
+  box-shadow: 0 10px 15px -3px rgba(148, 163, 184, 0.3);
+}
+
+.surface-muted {
+  border-radius: 1rem;
+  border: 1px solid rgb(203, 213, 225);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Typography plugin styles for docs */
+.prose {
+  --tw-prose-body: #334155;
+  --tw-prose-headings: #0f172a;
+  --tw-prose-links: #0284c7;
+  --tw-prose-code: #0f172a;
+  --tw-prose-pre-bg: #0f172a;
+}
+
+.prose pre {
+  background: #0f172a;
+  border-radius: 0.75rem;
+}
+
+.prose code {
+  font-family: var(--font-mono), monospace;
+}
+
+/* Code block styling */
+.code-block {
+  background: #0f172a;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.code-block pre {
+  margin: 0;
+  padding: 1rem 1.5rem;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+
+.code-block code {
+  font-family: var(--font-mono), monospace;
+  color: #e2e8f0;
+}

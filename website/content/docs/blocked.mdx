@@ -1,0 +1,135 @@
+---
+title: Handling Blocked Tasks
+description: How to help Claude when it gets stuck
+section: Usage
+order: 6
+---
+
+# Handling Blocked Tasks
+
+Sometimes Claude needs your help to continue. This is the "human in the loop" feature that makes Claudear practical for real development work.
+
+## When Does Claude Get Blocked?
+
+Claude will pause and ask for help when:
+
+- **Missing information** - The issue description is unclear
+- **Access issues** - Can't access a file or resource
+- **Design decisions** - Multiple valid approaches exist
+- **Permission errors** - Needs credentials or API keys
+- **Ambiguous requirements** - Needs clarification
+
+## How It Works
+
+### 1. Claude Detects a Blocker
+
+When Claude encounters an issue, it outputs:
+
+```
+BLOCKED: Need clarification on the authentication flow.
+Should we use JWT tokens or session cookies?
+```
+
+### 2. Claudear Posts to Linear
+
+A comment appears on your Linear issue:
+
+> **Claudear is blocked**
+>
+> Reason: Need clarification on the authentication flow. Should we use JWT tokens or session cookies?
+>
+> Please respond with guidance to continue.
+
+### 3. You Respond
+
+Reply to the comment with your guidance:
+
+> Use JWT tokens. Store them in httpOnly cookies for security.
+> The refresh token endpoint is at `/api/auth/refresh`.
+
+### 4. Claude Resumes
+
+Claudear detects your comment and:
+
+1. Sends your response to Claude
+2. Claude continues the task
+3. Issue stays in "In Progress"
+
+## Best Practices
+
+### Writing Good Unblock Responses
+
+**Be specific:**
+```
+Use the existing UserService class in src/services/user.ts.
+The createUser method should validate email format.
+```
+
+**Provide examples:**
+```
+Follow the pattern in src/api/products.ts for the new endpoint.
+Error responses should use the format: { error: string, code: number }
+```
+
+**Reference files:**
+```
+See the auth flow in docs/AUTHENTICATION.md for context.
+Use the same approach as the login endpoint.
+```
+
+### What to Avoid
+
+- **Vague responses** like "make it work" or "figure it out"
+- **Changing requirements** mid-task
+- **Referencing external docs** without summarizing
+
+## Automatic Detection
+
+Claudear detects blocks through keyword matching:
+
+- `BLOCKED:`
+- `I need clarification`
+- `I cannot proceed`
+- `permission denied`
+- `missing information`
+
+Claude is trained to use these phrases when stuck.
+
+## Timeout Handling
+
+If you don't respond within the timeout period (default: 1 hour):
+
+1. Task enters `FAILED` state
+2. Comment posted with timeout message
+3. Worktree preserved for debugging
+
+To adjust the timeout:
+
+```bash
+BLOCKED_TIMEOUT=7200  # 2 hours
+```
+
+## Monitoring Blocked Tasks
+
+Check blocked tasks:
+
+```bash
+claudear status --blocked
+```
+
+Output:
+```
+Blocked Tasks:
+  ENG-123: Add user authentication (blocked 15m ago)
+           Reason: Need API endpoint specification
+```
+
+## Manual Unblocking
+
+If the polling misses your comment:
+
+```bash
+claudear unblock ENG-123
+```
+
+This forces Claudear to check for new comments and resume.

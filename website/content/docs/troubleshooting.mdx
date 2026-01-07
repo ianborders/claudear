@@ -1,0 +1,243 @@
+---
+title: Troubleshooting
+description: Common issues and how to fix them
+section: Usage
+order: 7
+---
+
+# Troubleshooting
+
+Solutions to common issues you might encounter with Claudear.
+
+## Connection Issues
+
+### ngrok Tunnel Not Starting
+
+**Symptoms:**
+- Error: "Failed to establish ngrok tunnel"
+- No public URL in logs
+
+**Solutions:**
+
+1. **Check ngrok auth token:**
+   ```bash
+   ngrok config check
+   ```
+
+2. **Verify token in .env:**
+   ```bash
+   NGROK_AUTHTOKEN=your-token-here
+   ```
+
+3. **Test ngrok manually:**
+   ```bash
+   ngrok http 8000
+   ```
+
+4. **Check ngrok status:** Visit [status.ngrok.com](https://status.ngrok.com)
+
+### Webhook Events Not Received
+
+**Symptoms:**
+- Moving issues to Todo does nothing
+- No events in Claudear logs
+
+**Solutions:**
+
+1. **Verify webhook URL:**
+   - Must end with `/webhooks/linear`
+   - Must use HTTPS
+
+2. **Check webhook secret:**
+   - Same value in Linear and `.env`
+   - No trailing whitespace
+
+3. **Test the endpoint:**
+   ```bash
+   curl https://your-url.ngrok.io/webhooks/linear/test
+   ```
+
+4. **Check Linear webhook logs:**
+   - Go to Linear Settings → API → Webhooks
+   - Click on your webhook
+   - Check delivery history
+
+## Task Execution Issues
+
+### Claude Not Starting
+
+**Symptoms:**
+- Task stays in PENDING state
+- No Claude Code output
+
+**Solutions:**
+
+1. **Check Claude Code CLI:**
+   ```bash
+   claude --version
+   claude whoami
+   ```
+
+2. **Verify authentication:**
+   ```bash
+   claude auth status
+   ```
+
+3. **Check worktree creation:**
+   ```bash
+   ls -la /path/to/repo/.worktrees/
+   ```
+
+### Tasks Keep Failing
+
+**Symptoms:**
+- Tasks immediately fail
+- Error comments on issues
+
+**Solutions:**
+
+1. **Check the error message** in the Linear comment
+2. **Review logs:**
+   ```bash
+   LOG_LEVEL=DEBUG claudear
+   ```
+
+3. **Common causes:**
+   - Missing dependencies in target repo
+   - Git configuration issues
+   - Insufficient permissions
+
+### Worktree Creation Fails
+
+**Symptoms:**
+- Error: "Failed to create worktree"
+- Git errors in logs
+
+**Solutions:**
+
+1. **Check git status:**
+   ```bash
+   cd /path/to/repo
+   git status
+   git worktree list
+   ```
+
+2. **Clean up stale worktrees:**
+   ```bash
+   git worktree prune
+   ```
+
+3. **Check disk space:**
+   ```bash
+   df -h
+   ```
+
+## Linear Integration Issues
+
+### Wrong State IDs
+
+**Symptoms:**
+- Issues not picked up
+- State changes not detected
+
+**Solutions:**
+
+1. **Verify state names match exactly:**
+   ```bash
+   # In .env
+   LINEAR_STATE_TODO=Todo  # Must match Linear exactly
+   ```
+
+2. **Check case sensitivity:**
+   - Linear state names are case-sensitive
+
+3. **List available states:**
+   - Check your Linear board settings
+
+### Comments Not Detected
+
+**Symptoms:**
+- Blocked tasks don't resume
+- Your comments are ignored
+
+**Solutions:**
+
+1. **Check comment polling:**
+   ```bash
+   COMMENT_POLL_INTERVAL=10  # More frequent polling
+   ```
+
+2. **Verify you're commenting as yourself:**
+   - Comments from bots/integrations may be ignored
+
+3. **Manual unblock:**
+   ```bash
+   claudear unblock ISSUE-123
+   ```
+
+## Performance Issues
+
+### High Memory Usage
+
+**Solutions:**
+
+1. **Reduce concurrent tasks:**
+   ```bash
+   MAX_CONCURRENT_TASKS=2
+   ```
+
+2. **Check for stuck processes:**
+   ```bash
+   ps aux | grep claude
+   ```
+
+### Slow Task Startup
+
+**Solutions:**
+
+1. **Pre-fetch base branch:**
+   ```bash
+   cd /path/to/repo
+   git fetch origin main
+   ```
+
+2. **Use local base branch:**
+   - Ensure `main` is up to date locally
+
+## Database Issues
+
+### Corrupted Database
+
+**Symptoms:**
+- SQLite errors in logs
+- Tasks not persisting
+
+**Solutions:**
+
+1. **Backup and recreate:**
+   ```bash
+   mv claudear.db claudear.db.backup
+   claudear  # Creates fresh database
+   ```
+
+2. **Check file permissions:**
+   ```bash
+   ls -la claudear.db
+   ```
+
+## Getting Help
+
+If none of these solutions work:
+
+1. **Enable debug logging:**
+   ```bash
+   LOG_LEVEL=DEBUG claudear 2>&1 | tee debug.log
+   ```
+
+2. **Check GitHub Issues:**
+   [github.com/ianborders/claudear/issues](https://github.com/ianborders/claudear/issues)
+
+3. **Open a new issue** with:
+   - Debug logs (sanitized)
+   - Steps to reproduce
+   - Environment info (OS, Python version)

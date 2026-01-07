@@ -4,15 +4,30 @@ Autonomous development automation with Claude Code and Linear.
 
 Move a Linear issue from Backlog to "Todo" and Claudear takes over — it creates an isolated git worktree, runs Claude Code to implement the work, posts progress updates, and opens a PR when done. Move to "Done" and the PR auto-merges.
 
-## Quick Start
+## Installation
+
+### Option 1: pip (Recommended)
+
+```bash
+pip install claudear
+```
+
+### Option 2: From Source
 
 ```bash
 git clone https://github.com/ianborders/claudear.git
 cd claudear
 pip install -e .
-cp .env.example .env   # Then edit with your API keys
-claudear               # Start watching for tasks
 ```
+
+## Quick Start
+
+1. **Create your config file** at `~/.config/claudear/.env` (see [Configuration](#configuration) below)
+
+2. **Start watching for tasks:**
+   ```bash
+   claudear
+   ```
 
 ## How It Works
 

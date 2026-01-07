@@ -1,0 +1,48 @@
+---
+title: Introduction
+description: Autonomous development automation with Claude Code and Linear
+section: Getting Started
+order: 1
+---
+
+# Introduction
+
+Claudear is an open-source autonomous development automation tool that bridges **Linear** project management with **Claude Code**. When you move a Linear issue to "Todo", Claudear automatically picks it up, creates an isolated git worktree, runs Claude Code to implement the task, and manages the full lifecycle through PR creation.
+
+## How It Works
+
+1. **Move an issue to Todo** in Linear
+2. Claudear's webhook receives the event
+3. A dedicated git worktree and branch are created
+4. Claude Code analyzes the issue and implements the solution
+5. If blocked, Claude posts a comment asking for help
+6. When complete, a PR is created and the issue moves to "In Review"
+7. Move to "Done" to auto-merge the PR
+
+## Key Features
+
+- **Linear Integration** - Real-time webhooks for instant task pickup
+- **Git Worktrees** - Isolated environments for parallel task execution
+- **Claude Code CLI** - Uses your existing Claude Code subscription
+- **Human in the Loop** - Claude asks for help when blocked via Linear comments
+- **PR Automation** - Creates PRs with proper titles and Linear issue links
+- **Crash Recovery** - SQLite persistence survives restarts
+
+## Why Claudear?
+
+- **Open Source** - MIT licensed, fork and modify freely
+- **Self-Hosted** - Runs on your machine, your code stays private
+- **No API Costs** - Uses Claude Code subscription, not API credits
+- **Full Control** - Configure states, concurrency, timeouts
+
+## Prerequisites
+
+Before you begin, ensure you have:
+
+- Python 3.10 or higher
+- Claude Code CLI installed and authenticated
+- GitHub CLI (`gh`) installed and authenticated
+- A Linear workspace with API access
+- ngrok account for webhook tunneling
+
+Ready to get started? Head to the [Quick Start](/docs/quickstart) guide.
