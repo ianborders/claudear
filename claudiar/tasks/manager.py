@@ -117,6 +117,18 @@ class TaskManager:
         Args:
             issue: Issue to work on
         """
+        # Check if task already exists in a terminal or advanced state
+        existing_task = await self.store.get(issue.id)
+        if existing_task and existing_task.state in (
+            TaskState.COMPLETED,
+            TaskState.IN_REVIEW,
+            TaskState.DONE,
+        ):
+            logger.warning(
+                f"Task {issue.identifier} already in state {existing_task.state.value}, ignoring"
+            )
+            return
+
         async with self._lock:
             if issue.id in self._active_tasks:
                 logger.warning(f"Task {issue.identifier} already active")
