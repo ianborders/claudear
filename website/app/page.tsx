@@ -112,19 +112,32 @@ export default function Home() {
               className="text-4xl md:text-5xl text-gray-900 mb-6 leading-tight"
               style={{ fontWeight: 300 }}
             >
-              Autonomous Development
-              <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-emerald-600">
-                with Claude Code
+              Autonomous Development with
+              <span className="flex items-center justify-center gap-3 mt-2">
+                <Image
+                  src="/Claude-Logo.svg"
+                  alt="Claude"
+                  width={140}
+                  height={30}
+                  className="h-8 md:h-10 w-auto"
+                />
+                <span className="text-gray-400 text-2xl md:text-3xl">+</span>
+                <Image
+                  src="/linear-logo.svg"
+                  alt="Linear"
+                  width={140}
+                  height={35}
+                  className="h-8 md:h-10 w-auto"
+                />
               </span>
             </h1>
           </ScaleIn>
           <ScaleIn delay={0.2}>
             <p
-              className="text-lg text-gray-600 mb-10 max-w-2xl mx-auto leading-relaxed"
+              className="text-lg text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed"
               style={{ fontWeight: 300 }}
             >
-              Move Linear issues to Todo. Claudear implements, creates PRs, and manages the full
+              Hand off Linear issues to Claude Code. Claudear implements, tests, creates PRs, and manages the full
               lifecycle. Let Claude Code do the coding while you focus on what matters.
             </p>
           </ScaleIn>
