@@ -83,8 +83,11 @@ function generateContourLines(
       points.push({ x, y });
     }
 
+    // Helper to round numbers for consistent server/client rendering
+    const r = (n: number) => Math.round(n * 100) / 100;
+
     // Convert points to smooth bezier curve
-    let path = `M ${points[0].x} ${points[0].y}`;
+    let path = `M ${r(points[0].x)} ${r(points[0].y)}`;
 
     for (let i = 1; i < points.length; i++) {
       const prev = points[i - 1];
@@ -97,7 +100,7 @@ function generateContourLines(
       const cp2x = curr.x - (next.x - prev.x) * 0.2;
       const cp2y = curr.y - (next.y - prev.y) * 0.2;
 
-      path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${curr.x} ${curr.y}`;
+      path += ` C ${r(cp1x)} ${r(cp1y)}, ${r(cp2x)} ${r(cp2y)}, ${r(curr.x)} ${r(curr.y)}`;
     }
 
     path += ' Z'; // Close the path
