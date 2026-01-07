@@ -272,10 +272,19 @@ class TaskManager:
         async with self._lock:
             active_task = self._active_tasks.get(issue_id)
             if not active_task:
+                logger.warning(f"No active task found for {issue_id}, skipping completion")
+                return
+
+            # Prevent double-completion
+            if active_task.context.state in (TaskState.COMPLETED, TaskState.IN_REVIEW):
+                logger.warning(f"Task {issue_id} already completed, skipping")
                 return
 
             context = active_task.context
             context.state_machine.complete()
+
+            # Remove from active tasks immediately to prevent race conditions
+            del self._active_tasks[issue_id]
 
         # Update store
         await self.store.update_state(issue_id, TaskState.COMPLETED)
@@ -313,6 +322,7 @@ class TaskManager:
             await self.linear.update_issue_state(
                 issue_id,
                 self.settings.linear_state_in_review,
+                team_id=context.team_id,
             )
 
             # 5. Post completion comment
@@ -373,11 +383,12 @@ class TaskManager:
                 active_task.context.state_machine.mark_done()
                 del self._active_tasks[issue_id]
 
+        # Clean up worktree BEFORE merging (so branch can be deleted)
+        await self.worktrees.remove(task.issue_identifier)
+
         # Merge the PR if one exists
         if task.pr_number:
             try:
-                # Always merge from main repo, not worktree
-                # (gh pr merge can't delete branch from within a worktree)
                 repo_path = Path(self.settings.repo_path)
 
                 await self.github.merge_pr(
@@ -406,9 +417,6 @@ class TaskManager:
                 )
 
         await self.store.update_state(issue_id, TaskState.DONE)
-
-        # Clean up worktree
-        await self.worktrees.remove(task.issue_identifier)
 
     async def handle_comment(
         self, issue_id: str, comment_body: str, user_id: str
