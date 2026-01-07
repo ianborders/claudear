@@ -51,7 +51,7 @@ LINEAR_STATE_DONE=Done
 GITHUB_TOKEN=ghp_xxx                 # Settings → Developer settings → Tokens
 
 # Repository
-REPO_PATH=/path/to/your/repo         # The repo Claudiar will work on
+REPO_PATH=/path/to/your/repo         # The repo Claudear will work on
 
 # Server
 WEBHOOK_PORT=8000

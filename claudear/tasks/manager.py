@@ -153,7 +153,7 @@ class TaskManager:
                 )
                 await self.linear.post_comment(
                     issue.id,
-                    f"🤖 **Claudiar**: Task queued - maximum concurrent tasks ({self.settings.max_concurrent_tasks}) reached. "
+                    f"🤖 **Claudear**: Task queued - maximum concurrent tasks ({self.settings.max_concurrent_tasks}) reached. "
                     "Will start automatically when a slot opens.",
                 )
                 return
@@ -190,7 +190,7 @@ class TaskManager:
             # 5. Post status comment
             await self.linear.post_comment(
                 issue.id,
-                f"🤖 **Claudiar**: Starting work on this issue.\n\n"
+                f"🤖 **Claudear**: Starting work on this issue.\n\n"
                 f"- Branch: `{branch_name}`\n"
                 f"- Status: In Progress",
             )
@@ -221,7 +221,7 @@ class TaskManager:
             logger.error(f"Failed to start task {issue.identifier}: {e}")
             await self.linear.post_comment(
                 issue.id,
-                f"🤖 **Claudiar**: Failed to start task.\n\nError: {e}",
+                f"🤖 **Claudear**: Failed to start task.\n\nError: {e}",
             )
 
     async def _run_claude_session(
@@ -280,7 +280,7 @@ class TaskManager:
         # Post comment to Linear
         await self.linear.post_comment(
             issue_id,
-            f"🤖 **Claudiar is blocked**\n\n"
+            f"🤖 **Claudear is blocked**\n\n"
             f"**Reason**: {reason or 'Unknown'}\n\n"
             f"Please respond with guidance to continue.",
         )
@@ -352,7 +352,7 @@ class TaskManager:
             # 5. Post completion comment
             await self.linear.post_comment(
                 issue_id,
-                f"🤖 **Claudiar**: Task completed!\n\n"
+                f"🤖 **Claudear**: Task completed!\n\n"
                 f"**Pull Request**: [{pr_title}]({pr.url})\n\n"
                 f"Ready for review.",
             )
@@ -383,7 +383,7 @@ class TaskManager:
 
         await self.linear.post_comment(
             issue_id,
-            f"🤖 **Claudiar**: Task failed\n\n**Error**: {error}\n\n"
+            f"🤖 **Claudear**: Task failed\n\n**Error**: {error}\n\n"
             f"Please investigate and retry.",
         )
 
@@ -427,7 +427,7 @@ class TaskManager:
                 # Post completion comment
                 await self.linear.post_comment(
                     issue_id,
-                    f"🤖 **Claudiar**: PR #{task.pr_number} has been merged! 🎉\n\n"
+                    f"🤖 **Claudear**: PR #{task.pr_number} has been merged! 🎉\n\n"
                     f"Branch `{task.branch_name}` has been deleted.",
                 )
 
@@ -435,7 +435,7 @@ class TaskManager:
                 logger.error(f"Failed to merge PR for {task.issue_identifier}: {e}")
                 await self.linear.post_comment(
                     issue_id,
-                    f"🤖 **Claudiar**: Failed to merge PR #{task.pr_number}.\n\n"
+                    f"🤖 **Claudear**: Failed to merge PR #{task.pr_number}.\n\n"
                     f"**Error**: {e}\n\n"
                     f"Please merge manually: {task.pr_url}",
                 )
@@ -543,7 +543,7 @@ class TaskManager:
                 )
                 await self.linear.post_comment(
                     task.issue_id,
-                    "🤖 **Claudiar**: System restarted while task was in progress. "
+                    "🤖 **Claudear**: System restarted while task was in progress. "
                     "Please move back to 'Todo' to retry.",
                 )
 

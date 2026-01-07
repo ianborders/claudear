@@ -1,4 +1,4 @@
-"""Configuration management for Claudiar."""
+"""Configuration management for Claudear."""
 
 from pathlib import Path
 from typing import Optional

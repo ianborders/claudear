@@ -1,4 +1,4 @@
-"""FastAPI application for Claudiar webhook server."""
+"""FastAPI application for Claudear webhook server."""
 
 import logging
 from contextlib import asynccontextmanager
@@ -54,19 +54,19 @@ async def lifespan(app: FastAPI):
 
     # Start task manager
     await _task_manager.start()
-    logger.info("Claudiar server started")
+    logger.info("Claudear server started")
 
     yield
 
     # Shutdown
     await _task_manager.stop()
-    logger.info("Claudiar server stopped")
+    logger.info("Claudear server stopped")
 
 
 def create_app() -> FastAPI:
     """Create the FastAPI application."""
     app = FastAPI(
-        title="Claudiar",
+        title="Claudear",
         description="Autonomous development automation with Claude Code and Linear",
         version="0.1.0",
         lifespan=lifespan,

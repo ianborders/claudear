@@ -1,1 +1,1 @@
-"""FastAPI webhook server for Claudiar."""
+"""FastAPI webhook server for Claudear."""

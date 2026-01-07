@@ -1,1 +1,1 @@
-"""Utility modules for Claudiar."""
+"""Utility modules for Claudear."""
