@@ -3,10 +3,7 @@ from __future__ import annotations
 
 
 import asyncio
-import json
 import logging
-import os
-import re
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -67,7 +64,6 @@ class ClaudeRunner:
         issue_identifier: str,
         title: str,
         description: Optional[str] = None,
-        anthropic_api_key: Optional[str] = None,
         on_output: Optional[Callable[[str], None]] = None,
         on_blocked: Optional[Callable[[str], None]] = None,
         on_complete: Optional[Callable[[], None]] = None,
@@ -79,7 +75,6 @@ class ClaudeRunner:
             issue_identifier: Issue identifier (e.g., "ENG-123")
             title: Issue title
             description: Issue description
-            anthropic_api_key: Anthropic API key (or use env var)
             on_output: Callback for output (streaming)
             on_blocked: Callback when blocked (receives reason)
             on_complete: Callback when task completes
@@ -88,7 +83,6 @@ class ClaudeRunner:
         self.issue_identifier = issue_identifier
         self.title = title
         self.description = description
-        self.api_key = anthropic_api_key or os.environ.get("ANTHROPIC_API_KEY")
         self.on_output = on_output
         self.on_blocked = on_blocked
         self.on_complete = on_complete
@@ -204,11 +198,6 @@ class ClaudeRunner:
         if resume and self._session:
             cmd.extend(["--resume", self._session.session_id])
 
-        # Set up environment
-        env = os.environ.copy()
-        if self.api_key:
-            env["ANTHROPIC_API_KEY"] = self.api_key
-
         logger.debug(f"Executing: {' '.join(cmd)}")
         logger.debug(f"Working dir: {self.working_dir}")
 
@@ -219,7 +208,6 @@ class ClaudeRunner:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             cwd=self.working_dir,
-            env=env,
         )
 
         # Send prompt

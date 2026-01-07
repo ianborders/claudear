@@ -47,8 +47,7 @@ class Settings(BaseSettings):
     # ngrok
     ngrok_authtoken: Optional[str] = None
 
-    # Claude
-    anthropic_api_key: str
+    # Claude (uses Claude Code CLI, no API key needed)
 
     # Task Settings
     max_concurrent_tasks: int = 5
