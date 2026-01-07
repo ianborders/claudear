@@ -14,6 +14,7 @@ import {
   Copy,
 } from 'lucide-react';
 import { useState } from 'react';
+import Image from 'next/image';
 import {
   AnimatedSection,
   FadeIn,
@@ -159,13 +160,23 @@ export default function Home() {
               </div>
               <CopyButton text="pip install claudear" />
             </div>
-            <pre className="p-4">
-              <code>
-                <span className="text-gray-500">$</span>{' '}
-                <span className="text-emerald-400">pip install</span>{' '}
-                <span className="text-cyan-400">claudear</span>
-              </code>
-            </pre>
+            <div className="p-6 flex flex-col items-center gap-4">
+              <Image
+                src="/claudear-logo.png"
+                alt="Claudear"
+                width={400}
+                height={100}
+                className="opacity-90"
+                priority
+              />
+              <pre className="w-full">
+                <code>
+                  <span className="text-gray-500">$</span>{' '}
+                  <span className="text-emerald-400">pip install</span>{' '}
+                  <span className="text-cyan-400">claudear</span>
+                </code>
+              </pre>
+            </div>
           </div>
         </div>
       </AnimatedSection>
