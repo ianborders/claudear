@@ -6,11 +6,25 @@ from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+def _find_env_file() -> Optional[str]:
+    """Find .env file in standard locations."""
+    locations = [
+        Path.cwd() / ".env",  # Current directory
+        Path.home() / ".claudear" / ".env",  # ~/.claudear/.env
+        Path.home() / ".config" / "claudear" / ".env",  # ~/.config/claudear/.env
+        Path.home() / ".env",  # Home directory
+    ]
+    for loc in locations:
+        if loc.exists():
+            return str(loc)
+    return None
+
+
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_find_env_file(),
         env_file_encoding="utf-8",
         extra="ignore",
     )

@@ -2,7 +2,7 @@
 
 Autonomous development automation with Claude Code and Linear.
 
-Move a Linear issue to "Todo" and Claudear takes over — it creates a branch, runs Claude Code to implement the work, posts progress updates, and opens a PR when done. Move to "Done" and the PR auto-merges.
+Move a Linear issue from Backlog to "Todo" and Claudear takes over — it creates an isolated git worktree, runs Claude Code to implement the work, posts progress updates, and opens a PR when done. Move to "Done" and the PR auto-merges.
 
 ## Quick Start
 
@@ -16,12 +16,12 @@ claudear               # Start watching for tasks
 
 ## How It Works
 
-1. **Move issue to "Todo"** — Claudear picks it up
-2. **Automatic implementation** — Creates branch, runs Claude Code
+1. **Move issue from Backlog → Todo** — Claudear picks it up
+2. **Automatic implementation** — Creates isolated git worktree, runs Claude Code
 3. **Progress updates** — Comments on Linear as it works
 4. **Blocked?** — Posts a comment asking for help, waits for your reply
 5. **Complete** — Pushes code, creates PR, moves to "In Review"
-6. **Move to "Done"** — PR auto-merges, branch deleted
+6. **Move to "Done"** — PR auto-merges, worktree cleaned up
 
 ## Prerequisites
 
@@ -30,6 +30,7 @@ claudear               # Start watching for tasks
 - [ngrok](https://ngrok.com/) account (free tier works)
 - [GitHub CLI](https://cli.github.com/) (`gh`) installed and authenticated
 - Linear workspace with API access
+- Linear workflow with these states: **Backlog → Todo → In Progress → In Review → Done**
 
 ## Configuration
 
@@ -41,11 +42,12 @@ LINEAR_API_KEY=lin_api_xxx           # Settings → API → Personal API keys
 LINEAR_WEBHOOK_SECRET=whsec_xxx      # Created when you register the webhook
 LINEAR_TEAM_ID=KYB                   # Your team key from URL (linear.app/KYB/...)
 
-# Workflow state names (must match your Linear columns)
+# Required Linear workflow states (must match exactly)
 LINEAR_STATE_TODO=Todo
 LINEAR_STATE_IN_PROGRESS=In Progress
 LINEAR_STATE_IN_REVIEW=In Review
 LINEAR_STATE_DONE=Done
+# Note: Your Linear board must have: Backlog → Todo → In Progress → In Review → Done
 
 # GitHub
 GITHUB_TOKEN=ghp_xxx                 # Settings → Developer settings → Tokens
@@ -112,11 +114,11 @@ Claudear starts the webhook server and connects ngrok automatically.
 
 | Action | Result |
 |--------|--------|
-| Move issue → **Todo** | Claudear starts working |
+| Move issue **Backlog → Todo** | Claudear starts working |
 | Claude gets stuck | Posts comment, waits for your reply |
 | Reply to comment | Claudear resumes |
 | Task complete | PR created, issue → "In Review" |
-| Move issue → **Done** | PR merges, branch deleted |
+| Move issue → **Done** | PR merges, worktree cleaned up |
 
 ## Troubleshooting
 
