@@ -46,7 +46,7 @@ Claudiar watches your Linear board and automatically picks up tasks when you mov
 git clone https://github.com/ianborders/claudiar.git
 cd claudiar
 
-# Install dependencies
+# Install (creates the `claudiar` command automatically)
 pip install -e .
 
 # Copy and configure environment
@@ -54,46 +54,12 @@ cp .env.example .env
 # Edit .env with your API keys (see Configuration below)
 ```
 
-### Set up the `claudiar` command
-
-To run Claudiar from anywhere with a single command:
-
-```bash
-# Create ~/bin if it doesn't exist
-mkdir -p ~/bin
-
-# Create the launcher script
-cat > ~/bin/claudiar << 'EOF'
-#!/bin/bash
-
-cleanup() {
-    echo ""
-    echo "Shutting down..."
-    pkill -9 ngrok 2>/dev/null
-    exit 0
-}
-
-trap cleanup SIGINT SIGTERM
-
-# Kill any existing instances
-pkill -9 ngrok 2>/dev/null
-pkill -9 -f "claudiar.main" 2>/dev/null
-lsof -ti:8000 | xargs kill -9 2>/dev/null
-sleep 1
-
-# Start Claudiar (update this path to your installation)
-cd ~/claudiar && python3 -m claudiar.main
-
-# Cleanup on normal exit
-pkill -9 ngrok 2>/dev/null
-EOF
-
-chmod +x ~/bin/claudiar
-
-# Add ~/bin to PATH (add to ~/.zshrc or ~/.bashrc)
-echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zshrc
-source ~/.zshrc
-```
+> **Note:** If `claudiar` command is not found, add Python's bin directory to your PATH:
+> ```bash
+> # For macOS/Linux, add to ~/.zshrc or ~/.bashrc:
+> export PATH="$HOME/Library/Python/3.9/bin:$PATH"  # macOS
+> export PATH="$HOME/.local/bin:$PATH"              # Linux
+> ```
 
 ## Configuration
 

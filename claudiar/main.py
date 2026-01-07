@@ -1,7 +1,9 @@
 """Main entry point for Claudiar."""
 
 import asyncio
+import atexit
 import logging
+import signal
 import sys
 from pathlib import Path
 from typing import Optional
@@ -9,6 +11,9 @@ from typing import Optional
 import uvicorn
 
 from claudiar.config import get_settings
+
+# Track ngrok tunnel for cleanup
+_ngrok_tunnel = None
 
 # Configure logging
 logging.basicConfig(
@@ -22,12 +27,26 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def cleanup_ngrok():
+    """Clean up ngrok tunnel on exit."""
+    global _ngrok_tunnel
+    if _ngrok_tunnel:
+        try:
+            from pyngrok import ngrok
+            ngrok.disconnect(_ngrok_tunnel.public_url)
+            ngrok.kill()
+            logger.info("ngrok tunnel closed")
+        except Exception:
+            pass
+
+
 def setup_ngrok() -> Optional[str]:
     """Set up ngrok tunnel for webhook endpoint.
 
     Returns:
         Public URL or None if ngrok not available
     """
+    global _ngrok_tunnel
     settings = get_settings()
 
     if not settings.ngrok_authtoken:
@@ -42,7 +61,11 @@ def setup_ngrok() -> Optional[str]:
 
         # Create tunnel
         tunnel = ngrok.connect(settings.webhook_port, "http")
+        _ngrok_tunnel = tunnel
         public_url = tunnel.public_url
+
+        # Register cleanup
+        atexit.register(cleanup_ngrok)
 
         logger.info(f"ngrok tunnel established: {public_url}")
         logger.info(f"Webhook URL: {public_url}/webhooks/linear")
