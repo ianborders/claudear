@@ -134,6 +134,18 @@ class TaskManager:
                 logger.warning(f"Task {issue.identifier} already active")
                 return
 
+            # Re-check DB state inside lock to prevent race with _handle_complete
+            existing_task = await self.store.get(issue.id)
+            if existing_task and existing_task.state in (
+                TaskState.COMPLETED,
+                TaskState.IN_REVIEW,
+                TaskState.DONE,
+            ):
+                logger.warning(
+                    f"Task {issue.identifier} already in state {existing_task.state.value} (detected inside lock), ignoring"
+                )
+                return
+
             # Check concurrency limit
             if len(self._active_tasks) >= self.settings.max_concurrent_tasks:
                 logger.warning(
