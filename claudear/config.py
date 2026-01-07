@@ -7,12 +7,15 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 def _find_env_file() -> Optional[str]:
-    """Find .env file in standard locations."""
+    """Find .env file in standard locations.
+
+    Priority order:
+    1. ~/.config/claudear/.env (recommended, matches XDG standard)
+    2. Current working directory .env (for development)
+    """
     locations = [
-        Path.cwd() / ".env",  # Current directory
-        Path.home() / ".claudear" / ".env",  # ~/.claudear/.env
-        Path.home() / ".config" / "claudear" / ".env",  # ~/.config/claudear/.env
-        Path.home() / ".env",  # Home directory
+        Path.home() / ".config" / "claudear" / ".env",  # ~/.config/claudear/.env (primary)
+        Path.cwd() / ".env",  # Current directory (development fallback)
     ]
     for loc in locations:
         if loc.exists():
