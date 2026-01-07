@@ -1,0 +1,517 @@
+"""Task manager - orchestrates the full task lifecycle."""
+
+import asyncio
+import logging
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import Callable, Optional
+
+from claudiar.claude.runner import ClaudeRunner, ClaudeRunnerPool, SessionResult
+from claudiar.config import Settings
+from claudiar.git.github import GitHubClient
+from claudiar.git.worktree import WorktreeManager
+from claudiar.linear.client import LinearClient
+from claudiar.linear.models import IssueWebhook
+from claudiar.tasks.state import TaskContext, TaskState, TaskStateMachine
+from claudiar.tasks.store import TaskRecord, TaskStore
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class ActiveTask:
+    """Represents an active task being worked on."""
+
+    context: TaskContext
+    runner: Optional[ClaudeRunner] = None
+
+
+class TaskManager:
+    """Orchestrates the full task lifecycle from Linear to GitHub."""
+
+    def __init__(
+        self,
+        settings: Settings,
+        linear_client: LinearClient,
+        worktree_manager: WorktreeManager,
+        github_client: GitHubClient,
+        task_store: TaskStore,
+    ):
+        """Initialize the task manager.
+
+        Args:
+            settings: Application settings
+            linear_client: Linear API client
+            worktree_manager: Git worktree manager
+            github_client: GitHub client
+            task_store: Task persistence store
+        """
+        self.settings = settings
+        self.linear = linear_client
+        self.worktrees = worktree_manager
+        self.github = github_client
+        self.store = task_store
+
+        self._active_tasks: dict[str, ActiveTask] = {}
+        self._runner_pool = ClaudeRunnerPool(settings.max_concurrent_tasks)
+        self._lock = asyncio.Lock()
+        self._comment_poll_task: Optional[asyncio.Task] = None
+
+    async def start(self) -> None:
+        """Start the task manager."""
+        # Initialize store
+        await self.store.init()
+
+        # Recover any in-progress tasks
+        await self._recover_tasks()
+
+        # Start comment polling for blocked tasks
+        self._comment_poll_task = asyncio.create_task(self._poll_comments())
+
+        logger.info("Task manager started")
+
+    async def stop(self) -> None:
+        """Stop the task manager."""
+        if self._comment_poll_task:
+            self._comment_poll_task.cancel()
+            try:
+                await self._comment_poll_task
+            except asyncio.CancelledError:
+                pass
+
+        # Cancel any running tasks
+        for issue_id in list(self._active_tasks.keys()):
+            await self._runner_pool.cancel_runner(issue_id)
+
+        logger.info("Task manager stopped")
+
+    async def handle_issue_update(self, webhook: IssueWebhook, new_state_id: str) -> None:
+        """Handle an issue state update from Linear.
+
+        Args:
+            webhook: Issue webhook data
+            new_state_id: New state ID
+        """
+        # Get the state name
+        state_name = await self.linear.get_state_name(new_state_id)
+        if not state_name:
+            logger.warning(f"Unknown state ID: {new_state_id}")
+            return
+
+        logger.info(f"Issue {webhook.identifier} moved to '{state_name}'")
+
+        # Check if this is a Todo transition (start working)
+        if state_name == self.settings.linear_state_todo:
+            await self.start_task(webhook)
+
+        # Check if this is a Done transition (finalize)
+        elif state_name == self.settings.linear_state_done:
+            await self._handle_done(webhook.id)
+
+    async def start_task(self, issue: IssueWebhook) -> None:
+        """Start working on a task.
+
+        Args:
+            issue: Issue to work on
+        """
+        async with self._lock:
+            if issue.id in self._active_tasks:
+                logger.warning(f"Task {issue.identifier} already active")
+                return
+
+            # Check concurrency limit
+            if len(self._active_tasks) >= self.settings.max_concurrent_tasks:
+                logger.warning(
+                    f"Max concurrent tasks reached, queueing {issue.identifier}"
+                )
+                await self.linear.post_comment(
+                    issue.id,
+                    f"🤖 **Claudiar**: Task queued - maximum concurrent tasks ({self.settings.max_concurrent_tasks}) reached. "
+                    "Will start automatically when a slot opens.",
+                )
+                return
+
+        logger.info(f"Starting task: {issue.identifier} - {issue.title}")
+
+        try:
+            # 1. Update Linear to In Progress
+            await self.linear.update_issue_state(
+                issue.id,
+                self.settings.linear_state_in_progress,
+                team_id=issue.team_id,
+            )
+
+            # 2. Create worktree
+            branch_name = self.worktrees.get_branch_name(issue.identifier)
+            worktree_path = await self.worktrees.create(issue.identifier)
+
+            # 3. Create task context
+            context = TaskContext(
+                issue_id=issue.id,
+                issue_identifier=issue.identifier,
+                title=issue.title,
+                description=issue.description,
+                team_id=issue.team_id,
+                branch_name=branch_name,
+                worktree_path=str(worktree_path),
+            )
+            context.state_machine.start()
+
+            # 4. Save to store
+            await self._save_task(context)
+
+            # 5. Post status comment
+            await self.linear.post_comment(
+                issue.id,
+                f"🤖 **Claudiar**: Starting work on this issue.\n\n"
+                f"- Branch: `{branch_name}`\n"
+                f"- Status: In Progress",
+            )
+
+            # 6. Create runner and start
+            runner = ClaudeRunner(
+                working_dir=worktree_path,
+                issue_identifier=issue.identifier,
+                title=issue.title,
+                description=issue.description,
+                on_blocked=lambda reason: asyncio.create_task(
+                    self._handle_blocked(issue.id, reason)
+                ),
+                on_complete=lambda: asyncio.create_task(
+                    self._handle_complete(issue.id)
+                ),
+            )
+
+            active_task = ActiveTask(context=context, runner=runner)
+
+            async with self._lock:
+                self._active_tasks[issue.id] = active_task
+
+            # 7. Run Claude (non-blocking)
+            asyncio.create_task(self._run_claude_session(issue.id, runner))
+
+        except Exception as e:
+            logger.error(f"Failed to start task {issue.identifier}: {e}")
+            await self.linear.post_comment(
+                issue.id,
+                f"🤖 **Claudiar**: Failed to start task.\n\nError: {e}",
+            )
+
+    async def _run_claude_session(
+        self, issue_id: str, runner: ClaudeRunner
+    ) -> None:
+        """Run a Claude session for a task.
+
+        Args:
+            issue_id: Issue ID
+            runner: Claude runner
+        """
+        try:
+            result = await runner.run()
+
+            if result.session_id:
+                await self.store.update_session_id(issue_id, result.session_id)
+
+            # Check final state
+            if result.is_blocked:
+                await self._handle_blocked(issue_id, result.blocked_reason)
+            elif result.is_complete:
+                await self._handle_complete(issue_id)
+            elif result.error:
+                await self._handle_error(issue_id, result.error)
+            else:
+                # Session ended without clear outcome
+                logger.warning(
+                    f"Session for {issue_id} ended without clear state"
+                )
+
+        except Exception as e:
+            logger.error(f"Claude session failed: {e}")
+            await self._handle_error(issue_id, str(e))
+
+    async def _handle_blocked(
+        self, issue_id: str, reason: Optional[str]
+    ) -> None:
+        """Handle a blocked task.
+
+        Args:
+            issue_id: Issue ID
+            reason: Reason for blocking
+        """
+        logger.info(f"Task {issue_id} blocked: {reason}")
+
+        async with self._lock:
+            active_task = self._active_tasks.get(issue_id)
+            if not active_task:
+                return
+
+            active_task.context.state_machine.block(reason or "Unknown reason")
+
+        # Update store
+        await self.store.update_state(issue_id, TaskState.BLOCKED, reason)
+
+        # Post comment to Linear
+        await self.linear.post_comment(
+            issue_id,
+            f"🤖 **Claudiar is blocked**\n\n"
+            f"**Reason**: {reason or 'Unknown'}\n\n"
+            f"Please respond with guidance to continue.",
+        )
+
+    async def _handle_complete(self, issue_id: str) -> None:
+        """Handle task completion.
+
+        Args:
+            issue_id: Issue ID
+        """
+        logger.info(f"Task {issue_id} completed")
+
+        async with self._lock:
+            active_task = self._active_tasks.get(issue_id)
+            if not active_task:
+                return
+
+            context = active_task.context
+            context.state_machine.complete()
+
+        # Update store
+        await self.store.update_state(issue_id, TaskState.COMPLETED)
+
+        try:
+            # 1. Push to GitHub
+            worktree_path = Path(context.worktree_path)
+            await self.github.push_branch(worktree_path, context.branch_name)
+
+            # 2. Create PR
+            commit_messages = await self.github.get_commit_messages(worktree_path)
+            pr_body = self.github.format_pr_body(
+                issue_identifier=context.issue_identifier,
+                summary=f"Implements {context.title}",
+                changes=commit_messages[:10],  # Limit to 10 commits
+            )
+            pr_title = self.github.format_pr_title(
+                issue_identifier=context.issue_identifier,
+                title=context.title,
+            )
+
+            pr = await self.github.create_pr(
+                worktree_path=worktree_path,
+                title=pr_title,
+                body=pr_body,
+            )
+
+            context.pr_number = pr.number
+            context.pr_url = pr.url
+
+            # 3. Update store with PR info
+            await self.store.update_pr_info(issue_id, pr.number, pr.url)
+
+            # 4. Move to In Review in Linear
+            await self.linear.update_issue_state(
+                issue_id,
+                self.settings.linear_state_in_review,
+            )
+
+            # 5. Post completion comment
+            await self.linear.post_comment(
+                issue_id,
+                f"🤖 **Claudiar**: Task completed!\n\n"
+                f"**Pull Request**: [{pr_title}]({pr.url})\n\n"
+                f"Ready for review.",
+            )
+
+            # 6. Update state machine
+            context.state_machine.submit_for_review()
+            await self.store.update_state(issue_id, TaskState.IN_REVIEW)
+
+        except Exception as e:
+            logger.error(f"Failed to complete task {issue_id}: {e}")
+            await self._handle_error(issue_id, str(e))
+
+    async def _handle_error(self, issue_id: str, error: str) -> None:
+        """Handle a task error.
+
+        Args:
+            issue_id: Issue ID
+            error: Error message
+        """
+        logger.error(f"Task {issue_id} failed: {error}")
+
+        async with self._lock:
+            active_task = self._active_tasks.get(issue_id)
+            if active_task:
+                active_task.context.state_machine.fail(error)
+
+        await self.store.update_state(issue_id, TaskState.FAILED, error)
+
+        await self.linear.post_comment(
+            issue_id,
+            f"🤖 **Claudiar**: Task failed\n\n**Error**: {error}\n\n"
+            f"Please investigate and retry.",
+        )
+
+    async def _handle_done(self, issue_id: str) -> None:
+        """Handle issue moved to Done.
+
+        Args:
+            issue_id: Issue ID
+        """
+        logger.info(f"Task {issue_id} marked as done")
+
+        async with self._lock:
+            active_task = self._active_tasks.get(issue_id)
+            if active_task:
+                active_task.context.state_machine.mark_done()
+                del self._active_tasks[issue_id]
+
+        await self.store.update_state(issue_id, TaskState.DONE)
+
+        # Optionally clean up worktree
+        task = await self.store.get(issue_id)
+        if task:
+            await self.worktrees.remove(task.issue_identifier)
+
+    async def handle_comment(
+        self, issue_id: str, comment_body: str, user_id: str
+    ) -> None:
+        """Handle a new comment on an issue.
+
+        Args:
+            issue_id: Issue ID
+            comment_body: Comment text
+            user_id: ID of comment author
+        """
+        # Check if this is a blocked task
+        async with self._lock:
+            active_task = self._active_tasks.get(issue_id)
+            if (
+                not active_task
+                or active_task.context.state != TaskState.BLOCKED
+            ):
+                return
+
+        # Check comment is from human (not our bot)
+        bot_id = await self.linear.get_bot_user_id()
+        if user_id == bot_id:
+            return
+
+        logger.info(f"Received human comment on blocked task {issue_id}")
+
+        # Unblock and resume
+        active_task.context.state_machine.unblock()
+        await self.store.update_state(issue_id, TaskState.IN_PROGRESS)
+
+        # Resume Claude session
+        if active_task.runner:
+            result = await active_task.runner.resume(comment_body)
+
+            if result.is_blocked:
+                await self._handle_blocked(issue_id, result.blocked_reason)
+            elif result.is_complete:
+                await self._handle_complete(issue_id)
+
+    async def _poll_comments(self) -> None:
+        """Background task to poll for new comments on blocked tasks."""
+        while True:
+            try:
+                await asyncio.sleep(self.settings.comment_poll_interval)
+
+                # Get blocked tasks
+                blocked_tasks = await self.store.get_blocked_tasks()
+
+                for task in blocked_tasks:
+                    if not task.blocked_at:
+                        continue
+
+                    # Check for timeout
+                    blocked_duration = (
+                        datetime.now() - task.blocked_at
+                    ).total_seconds()
+                    if blocked_duration > self.settings.blocked_timeout:
+                        logger.warning(
+                            f"Task {task.issue_identifier} blocked timeout"
+                        )
+                        await self._handle_error(
+                            task.issue_id,
+                            f"Blocked for {blocked_duration/3600:.1f} hours without response",
+                        )
+                        continue
+
+                    # Check for new comments
+                    comments = await self.linear.get_new_human_comments(
+                        task.issue_id, task.blocked_at
+                    )
+
+                    if comments:
+                        latest = max(comments, key=lambda c: c.created_at)
+                        await self.handle_comment(
+                            task.issue_id,
+                            latest.body,
+                            latest.user.id if latest.user else "",
+                        )
+
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Comment polling error: {e}")
+
+    async def _recover_tasks(self) -> None:
+        """Recover tasks that were in progress when we stopped."""
+        active_tasks = await self.store.get_active_tasks()
+
+        for task in active_tasks:
+            if task.state == TaskState.IN_PROGRESS:
+                # Mark as failed - can't resume mid-session
+                logger.warning(
+                    f"Task {task.issue_identifier} was in progress, marking as failed"
+                )
+                await self.store.update_state(
+                    task.issue_id,
+                    TaskState.FAILED,
+                    "System restart - please retry",
+                )
+                await self.linear.post_comment(
+                    task.issue_id,
+                    "🤖 **Claudiar**: System restarted while task was in progress. "
+                    "Please move back to 'Todo' to retry.",
+                )
+
+            elif task.state == TaskState.BLOCKED:
+                # Keep as blocked, will poll for comments
+                logger.info(
+                    f"Task {task.issue_identifier} still blocked, will poll for response"
+                )
+
+    async def _save_task(self, context: TaskContext) -> None:
+        """Save task context to store.
+
+        Args:
+            context: Task context to save
+        """
+        record = TaskRecord(
+            issue_id=context.issue_id,
+            issue_identifier=context.issue_identifier,
+            title=context.title,
+            description=context.description,
+            team_id=context.team_id,
+            branch_name=context.branch_name or "",
+            worktree_path=context.worktree_path or "",
+            state=context.state,
+            blocked_reason=context.state_machine.blocked_reason,
+            blocked_at=context.state_machine.blocked_at,
+            pr_number=context.pr_number,
+            pr_url=context.pr_url,
+            session_id=context.session_id,
+            created_at=context.created_at,
+            updated_at=datetime.now(),
+        )
+        await self.store.save(record)
+
+    def get_active_tasks(self) -> list[TaskContext]:
+        """Get all active tasks.
+
+        Returns:
+            List of task contexts
+        """
+        return [task.context for task in self._active_tasks.values()]
