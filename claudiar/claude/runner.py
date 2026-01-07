@@ -1,4 +1,6 @@
 """Claude Code runner using CLI in headless mode."""
+from __future__ import annotations
+
 
 import asyncio
 import json

@@ -1,4 +1,6 @@
 """GitHub integration via gh CLI for PR creation."""
+from __future__ import annotations
+
 
 import asyncio
 import logging
@@ -361,6 +363,44 @@ class GitHubClient:
 
         except GitHubError as e:
             logger.error(f"Failed to commit: {e}")
+            raise
+
+    async def merge_pr(
+        self,
+        worktree_path: Path,
+        pr_number: int,
+        merge_method: str = "squash",
+        delete_branch: bool = True,
+    ) -> bool:
+        """Merge a pull request.
+
+        Args:
+            worktree_path: Path to the worktree
+            pr_number: PR number to merge
+            merge_method: Merge method (merge, squash, rebase)
+            delete_branch: Delete branch after merge
+
+        Returns:
+            True if merge was successful
+        """
+        logger.info(f"Merging PR #{pr_number} using {merge_method}")
+
+        args = [
+            "pr",
+            "merge",
+            str(pr_number),
+            f"--{merge_method}",
+        ]
+
+        if delete_branch:
+            args.append("--delete-branch")
+
+        try:
+            await self._run_gh(*args, cwd=worktree_path)
+            logger.info(f"Successfully merged PR #{pr_number}")
+            return True
+        except GitHubError as e:
+            logger.error(f"Failed to merge PR: {e}")
             raise
 
     async def get_commit_messages(

@@ -12,8 +12,8 @@ Claudiar watches your Linear board and automatically picks up tasks when you mov
 3. Creates git worktree + branch
 4. Claude Code works on the task
 5. If blocked → posts comment, waits for your response
-6. When complete → pushes to GitHub, creates PR
-7. You review, move to "Done"
+6. When complete → pushes to GitHub, creates PR, moves to "In Review"
+7. You review, move to "Done" → PR auto-merges
 ```
 
 ## Architecture
@@ -32,17 +32,18 @@ Claudiar watches your Linear board and automatically picks up tasks when you mov
 
 ## Prerequisites
 
-- Python 3.10+
+- Python 3.9+
 - [ngrok](https://ngrok.com/) account (free tier works)
-- [Claude Code](https://claude.ai/code) CLI installed
+- [Claude Code](https://claude.ai/code) CLI installed and authenticated
 - Linear workspace with API access
-- GitHub account with personal access token
+- GitHub CLI (`gh`) installed and authenticated
+- A git repository to work on
 
 ## Installation
 
 ```bash
 # Clone the repo
-git clone https://github.com/YOUR_USERNAME/claudiar.git
+git clone https://github.com/ianborders/claudiar.git
 cd claudiar
 
 # Install dependencies
@@ -50,7 +51,48 @@ pip install -e .
 
 # Copy and configure environment
 cp .env.example .env
-# Edit .env with your API keys
+# Edit .env with your API keys (see Configuration below)
+```
+
+### Set up the `claudiar` command
+
+To run Claudiar from anywhere with a single command:
+
+```bash
+# Create ~/bin if it doesn't exist
+mkdir -p ~/bin
+
+# Create the launcher script
+cat > ~/bin/claudiar << 'EOF'
+#!/bin/bash
+
+cleanup() {
+    echo ""
+    echo "Shutting down..."
+    pkill -9 ngrok 2>/dev/null
+    exit 0
+}
+
+trap cleanup SIGINT SIGTERM
+
+# Kill any existing instances
+pkill -9 ngrok 2>/dev/null
+pkill -9 -f "claudiar.main" 2>/dev/null
+lsof -ti:8000 | xargs kill -9 2>/dev/null
+sleep 1
+
+# Start Claudiar (update this path to your installation)
+cd ~/claudiar && python3 -m claudiar.main
+
+# Cleanup on normal exit
+pkill -9 ngrok 2>/dev/null
+EOF
+
+chmod +x ~/bin/claudiar
+
+# Add ~/bin to PATH (add to ~/.zshrc or ~/.bashrc)
+echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
 ```
 
 ## Configuration
@@ -59,61 +101,80 @@ Create a `.env` file with:
 
 ```bash
 # Linear Integration
-LINEAR_API_KEY=lin_api_xxx           # Settings → API → Personal API keys
+LINEAR_API_KEY=lin_api_xxx           # Linear API key
 LINEAR_WEBHOOK_SECRET=lin_wh_xxx     # Created when registering webhook
-LINEAR_TEAM_ID=XXX                   # Team settings → scroll to bottom
+LINEAR_TEAM_ID=XXX                   # Your team key (e.g., "ENG")
 
-# Linear Workflow States (match your board)
+# Linear Workflow States (match your board column names)
 LINEAR_STATE_TODO=Todo
 LINEAR_STATE_IN_PROGRESS=In Progress
 LINEAR_STATE_IN_REVIEW=In Review
 LINEAR_STATE_DONE=Done
 
-# GitHub
-GITHUB_TOKEN=ghp_xxx                 # Settings → Developer settings → Personal access tokens
+# GitHub (for PR creation)
+GITHUB_TOKEN=ghp_xxx                 # GitHub personal access token
 
 # Repository to work on
-REPO_PATH=/path/to/your/repo         # Must be a git repository
+REPO_PATH=/path/to/your/repo         # Absolute path to a git repository
 
 # Server
 WEBHOOK_PORT=8000
 
-# ngrok
-NGROK_AUTHTOKEN=xxx                  # dashboard.ngrok.com/get-started/your-authtoken
-
-# Claude
-ANTHROPIC_API_KEY=sk-ant-xxx         # console.anthropic.com
+# ngrok (for webhook tunnel)
+NGROK_AUTHTOKEN=xxx                  # ngrok auth token
 ```
+
+### Getting your API keys
+
+| Key | Where to get it |
+|-----|-----------------|
+| `LINEAR_API_KEY` | Linear → Settings → API → Personal API keys |
+| `LINEAR_TEAM_ID` | Your team's key from the URL (e.g., `ENG` from `linear.app/ENG/...`) |
+| `GITHUB_TOKEN` | GitHub → Settings → Developer settings → Personal access tokens |
+| `NGROK_AUTHTOKEN` | [ngrok Dashboard](https://dashboard.ngrok.com/get-started/your-authtoken) → Your Authtoken |
 
 ## Setup
 
-### 1. Start ngrok tunnel
+### 1. Set up ngrok with a static domain
 
-```bash
-./start-ngrok.sh
-# or: ngrok http 8000
-```
+Claudiar manages ngrok automatically, but you need a **static ngrok domain** so the webhook URL persists across restarts.
 
-Note the public URL (e.g., `https://abc123.ngrok-free.app`)
+1. Go to [ngrok Dashboard → Domains](https://dashboard.ngrok.com/cloud-edge/domains)
+2. Create a free static domain (e.g., `your-name.ngrok-free.app`)
+3. Configure ngrok to use it by creating/editing `~/Library/Application Support/ngrok/ngrok.yml`:
+   ```yaml
+   authtoken: your_auth_token
+   tunnels:
+     claudiar:
+       addr: 8000
+       proto: http
+       domain: your-name.ngrok-free.app
+   ```
 
 ### 2. Register Linear webhook
 
-Go to Linear → Settings → API → Webhooks → Create webhook:
+1. Go to Linear → Settings → API → Webhooks → **Create webhook**
+2. Configure:
 
-| Setting | Value |
-|---------|-------|
-| URL | `https://YOUR-NGROK-URL/webhooks/linear` |
-| Label | `Claudiar` |
-| Team | Select your team |
-| Events | ✅ Issues, ✅ Comments |
+   | Setting | Value |
+   |---------|-------|
+   | URL | `https://your-name.ngrok-free.app/webhooks/linear` |
+   | Label | `Claudiar` |
+   | Team | Select your team |
+   | Events | Issues, Comments |
 
-Copy the signing secret to your `.env` as `LINEAR_WEBHOOK_SECRET`
+3. Copy the **signing secret** to your `.env` as `LINEAR_WEBHOOK_SECRET`
 
 ### 3. Run Claudiar
 
 ```bash
 claudiar
 ```
+
+That's it! Claudiar will:
+- Start the webhook server on port 8000
+- Connect ngrok tunnel automatically
+- Begin watching for Linear events
 
 ## Usage
 
@@ -130,15 +191,15 @@ claudiar
    - Code is pushed to GitHub
    - PR is created
    - Issue moves to "In Review"
-7. Review the PR, merge it
-8. Move issue to "Done"
+7. Review the PR
+8. Move issue to **"Done"** → PR auto-merges and branch is deleted
 
 ## Task States
 
 ```
 PENDING → IN_PROGRESS ⟷ BLOCKED → FAILED
               ↓
-         COMPLETED → IN_REVIEW → DONE
+         COMPLETED → IN_REVIEW → DONE (auto-merge)
 ```
 
 ## Project Structure
@@ -153,24 +214,21 @@ claudiar/
 │   ├── claude/              # Claude Code runner
 │   ├── git/                 # Worktree & GitHub integration
 │   └── tasks/               # Task orchestration
-├── scripts/
-│   ├── start-ngrok.sh       # Start ngrok tunnel
-│   ├── register_webhook.py  # Register Linear webhook
-│   └── test_webhook.py      # Test webhook endpoint
-└── docs/
-    └── IMPLEMENTATION_PLAN.md
+└── scripts/
+    └── test_webhook.py      # Test webhook endpoint
 ```
 
 ## Troubleshooting
 
 ### Webhook not receiving events
-- Check ngrok is running and URL matches Linear webhook config
+- Check Claudiar logs show ngrok tunnel established
+- Verify webhook URL in Linear matches your ngrok domain
 - Verify `LINEAR_WEBHOOK_SECRET` matches what Linear provided
-- Test with: `python scripts/test_webhook.py`
+- Test endpoint: `curl https://your-domain.ngrok-free.app/health`
 
 ### Claude not starting
-- Ensure `claude` CLI is installed and authenticated
-- Check `ANTHROPIC_API_KEY` is set correctly
+- Ensure `claude` CLI is installed: `which claude`
+- Ensure you're logged in to Claude Code (run `claude` manually to check)
 - Verify `REPO_PATH` exists and is a git repository
 
 ### Tasks stuck in "Blocked"
@@ -178,19 +236,23 @@ claudiar/
 - Reply to the comment to unblock
 - Claudiar polls comments every 30 seconds
 
-## Development
+### Port already in use
+- The `claudiar` command automatically kills existing instances
+- If issues persist: `lsof -ti:8000 | xargs kill -9`
 
-```bash
-# Install dev dependencies
-pip install -e ".[dev]"
+### ngrok tunnel fails
+- Check your `NGROK_AUTHTOKEN` is correct
+- Ensure no other ngrok processes: `pkill ngrok`
 
-# Run tests
-pytest
+## How Claude Code is Used
 
-# Format code
-black claudiar/
-ruff check claudiar/
-```
+Claudiar runs Claude Code CLI in headless mode using your **Claude Code subscription** (not API credits). It's the same Claude you use interactively, just automated.
+
+The runner:
+1. Starts `claude --print --dangerously-skip-permissions`
+2. Sends a structured prompt with the issue details
+3. Monitors output for completion or blocked states
+4. Commits and pushes when done
 
 ## License
 

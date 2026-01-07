@@ -59,22 +59,25 @@ def setup_ngrok() -> Optional[str]:
 
 def print_banner():
     """Print startup banner."""
-    print(
-        """
+    # Light purple color
+    PURPLE = "\033[38;5;141m"
+    RESET = "\033[0m"
+
+    banner = f"""{PURPLE}
 ╔═══════════════════════════════════════════════════════════════╗
 ║                                                               ║
-║      ██████╗██╗      █████╗ ██╗   ██╗██████╗ ██╗ █████╗ ██████╗║
-║     ██╔════╝██║     ██╔══██╗██║   ██║██╔══██╗██║██╔══██╗██╔══██║
-║     ██║     ██║     ███████║██║   ██║██║  ██║██║███████║██████╔╝║
-║     ██║     ██║     ██╔══██║██║   ██║██║  ██║██║██╔══██║██╔══██╗║
-║     ╚██████╗███████╗██║  ██║╚██████╔╝██████╔╝██║██║  ██║██║  ██║║
-║      ╚═════╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝║
+║  ██████╗██╗      █████╗ ██╗   ██╗██████╗ ██╗ █████╗ ██████╗   ║
+║ ██╔════╝██║     ██╔══██╗██║   ██║██╔══██╗██║██╔══██╗██╔══██╗  ║
+║ ██║     ██║     ███████║██║   ██║██║  ██║██║███████║██████╔╝  ║
+║ ██║     ██║     ██╔══██║██║   ██║██║  ██║██║██╔══██║██╔══██╗  ║
+║ ╚██████╗███████╗██║  ██║╚██████╔╝██████╔╝██║██║  ██║██║  ██║  ║
+║  ╚═════╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝  ║
 ║                                                               ║
-║   Autonomous Development Automation with Claude Code & Linear ║
+║  Autonomous Development Automation with Claude Code & Linear  ║
 ║                                                               ║
-╚═══════════════════════════════════════════════════════════════╝
+╚═══════════════════════════════════════════════════════════════╝{RESET}
 """
-    )
+    print(banner)
 
 
 def validate_config():
@@ -92,8 +95,6 @@ def validate_config():
         errors.append("LINEAR_TEAM_ID is required")
     if not settings.github_token:
         errors.append("GITHUB_TOKEN is required")
-    if not settings.anthropic_api_key:
-        errors.append("ANTHROPIC_API_KEY is required")
 
     # Check repo path exists
     if settings.repo_path:

@@ -1,4 +1,6 @@
 """Task manager - orchestrates the full task lifecycle."""
+from __future__ import annotations
+
 
 import asyncio
 import logging
@@ -352,12 +354,18 @@ class TaskManager:
         )
 
     async def _handle_done(self, issue_id: str) -> None:
-        """Handle issue moved to Done.
+        """Handle issue moved to Done - merge PR and clean up.
 
         Args:
             issue_id: Issue ID
         """
         logger.info(f"Task {issue_id} marked as done")
+
+        # Get task record to find PR info
+        task = await self.store.get(issue_id)
+        if not task:
+            logger.warning(f"No task record found for {issue_id}")
+            return
 
         async with self._lock:
             active_task = self._active_tasks.get(issue_id)
@@ -365,12 +373,42 @@ class TaskManager:
                 active_task.context.state_machine.mark_done()
                 del self._active_tasks[issue_id]
 
+        # Merge the PR if one exists
+        if task.pr_number:
+            try:
+                # Always merge from main repo, not worktree
+                # (gh pr merge can't delete branch from within a worktree)
+                repo_path = Path(self.settings.repo_path)
+
+                await self.github.merge_pr(
+                    worktree_path=repo_path,
+                    pr_number=task.pr_number,
+                    merge_method="squash",
+                    delete_branch=True,
+                )
+
+                logger.info(f"Merged PR #{task.pr_number} for {task.issue_identifier}")
+
+                # Post completion comment
+                await self.linear.post_comment(
+                    issue_id,
+                    f"🤖 **Claudiar**: PR #{task.pr_number} has been merged! 🎉\n\n"
+                    f"Branch `{task.branch_name}` has been deleted.",
+                )
+
+            except Exception as e:
+                logger.error(f"Failed to merge PR for {task.issue_identifier}: {e}")
+                await self.linear.post_comment(
+                    issue_id,
+                    f"🤖 **Claudiar**: Failed to merge PR #{task.pr_number}.\n\n"
+                    f"**Error**: {e}\n\n"
+                    f"Please merge manually: {task.pr_url}",
+                )
+
         await self.store.update_state(issue_id, TaskState.DONE)
 
-        # Optionally clean up worktree
-        task = await self.store.get(issue_id)
-        if task:
-            await self.worktrees.remove(task.issue_identifier)
+        # Clean up worktree
+        await self.worktrees.remove(task.issue_identifier)
 
     async def handle_comment(
         self, issue_id: str, comment_body: str, user_id: str

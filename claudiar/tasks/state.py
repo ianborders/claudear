@@ -1,4 +1,6 @@
 """Task state machine for tracking task lifecycle."""
+from __future__ import annotations
+
 
 from dataclasses import dataclass, field
 from datetime import datetime

@@ -1,4 +1,6 @@
 """Git worktree management for parallel task isolation."""
+from __future__ import annotations
+
 
 import asyncio
 import logging
