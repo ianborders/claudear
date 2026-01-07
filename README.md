@@ -1,22 +1,22 @@
-# Claudiar
+# Claudear
 
 Autonomous development automation with Claude Code and Linear.
 
-Move a Linear issue to "Todo" and Claudiar takes over — it creates a branch, runs Claude Code to implement the work, posts progress updates, and opens a PR when done. Move to "Done" and the PR auto-merges.
+Move a Linear issue to "Todo" and Claudear takes over — it creates a branch, runs Claude Code to implement the work, posts progress updates, and opens a PR when done. Move to "Done" and the PR auto-merges.
 
 ## Quick Start
 
 ```bash
-git clone https://github.com/ianborders/claudiar.git
-cd claudiar
+git clone https://github.com/ianborders/claudear.git
+cd claudear
 pip install -e .
 cp .env.example .env   # Then edit with your API keys
-claudiar               # Start watching for tasks
+claudear               # Start watching for tasks
 ```
 
 ## How It Works
 
-1. **Move issue to "Todo"** — Claudiar picks it up
+1. **Move issue to "Todo"** — Claudear picks it up
 2. **Automatic implementation** — Creates branch, runs Claude Code
 3. **Progress updates** — Comments on Linear as it works
 4. **Blocked?** — Posts a comment asking for help, waits for your reply
@@ -73,7 +73,7 @@ You need a persistent URL so the Linear webhook survives restarts.
 ```yaml
 authtoken: your_auth_token
 tunnels:
-  claudiar:
+  claudear:
     addr: 8000
     proto: http
     domain: your-name.ngrok-free.app
@@ -81,7 +81,7 @@ tunnels:
 
 ### 2. Disable Linear's GitHub automations
 
-Linear has built-in automations that conflict with Claudiar. **You must disable them:**
+Linear has built-in automations that conflict with Claudear. **You must disable them:**
 
 1. Linear → Settings → Team Settings → Workflow → **GitHub**
 2. Set all "Automate state changes" options to **No action**
@@ -90,7 +90,7 @@ Linear has built-in automations that conflict with Claudiar. **You must disable 
    - "When a PR is merged" → No action
    - etc.
 
-If you skip this, Linear will fight Claudiar for control of issue states.
+If you skip this, Linear will fight Claudear for control of issue states.
 
 ### 3. Register Linear webhook
 
@@ -103,18 +103,18 @@ If you skip this, Linear will fight Claudiar for control of issue states.
 ### 4. Run
 
 ```bash
-claudiar
+claudear
 ```
 
-Claudiar starts the webhook server and connects ngrok automatically.
+Claudear starts the webhook server and connects ngrok automatically.
 
 ## Usage
 
 | Action | Result |
 |--------|--------|
-| Move issue → **Todo** | Claudiar starts working |
+| Move issue → **Todo** | Claudear starts working |
 | Claude gets stuck | Posts comment, waits for your reply |
-| Reply to comment | Claudiar resumes |
+| Reply to comment | Claudear resumes |
 | Task complete | PR created, issue → "In Review" |
 | Move issue → **Done** | PR merges, branch deleted |
 
@@ -139,7 +139,7 @@ Claudiar starts the webhook server and connects ngrok automatically.
 
 ## How It Uses Claude Code
 
-Claudiar runs Claude Code CLI in headless mode using your **Claude Code subscription** (not API credits). It's the same Claude you use interactively, just automated.
+Claudear runs Claude Code CLI in headless mode using your **Claude Code subscription** (not API credits). It's the same Claude you use interactively, just automated.
 
 ## License
 

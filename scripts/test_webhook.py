@@ -21,7 +21,7 @@ def main():
     print()
 
     try:
-        from claudiar.config import get_settings
+        from claudear.config import get_settings
 
         settings = get_settings()
     except Exception as e:
@@ -84,7 +84,7 @@ def main():
 
     except httpx.ConnectError:
         print(f"\n❌ Could not connect to {url}")
-        print("   Make sure the Claudiar server is running")
+        print("   Make sure the Claudear server is running")
     except Exception as e:
         print(f"\n❌ Error: {e}")
 

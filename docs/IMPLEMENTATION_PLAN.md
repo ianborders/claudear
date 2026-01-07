@@ -74,12 +74,12 @@ Claudiar is an autonomous development automation system that bridges Linear proj
 ## Project Structure
 
 ```
-claudiar/
+claudear/
 ├── pyproject.toml
 ├── .env.example
 ├── docs/
 │   └── IMPLEMENTATION_PLAN.md
-├── claudiar/
+├── claudear/
 │   ├── __init__.py
 │   ├── main.py                 # Entry point
 │   ├── config.py               # Settings from .env
@@ -120,7 +120,7 @@ claudiar/
 - `pyproject.toml` - Project configuration and dependencies
 - `.env.example` - Template for environment variables
 - `.gitignore` - Ignore .env, __pycache__, etc.
-- `claudiar/__init__.py` - Package init
+- `claudear/__init__.py` - Package init
 
 **Actions:**
 1. Create project structure directories
@@ -131,7 +131,7 @@ claudiar/
 
 ### Step 2: Configuration Module
 **Files to create:**
-- `claudiar/config.py` - Settings class using pydantic-settings
+- `claudear/config.py` - Settings class using pydantic-settings
 
 **Configuration needed:**
 ```python
@@ -163,9 +163,9 @@ ANTHROPIC_API_KEY
 
 ### Step 3: Linear Client
 **Files to create:**
-- `claudiar/linear/__init__.py`
-- `claudiar/linear/models.py` - Pydantic models for Linear entities
-- `claudiar/linear/client.py` - GraphQL API wrapper
+- `claudear/linear/__init__.py`
+- `claudear/linear/models.py` - Pydantic models for Linear entities
+- `claudear/linear/client.py` - GraphQL API wrapper
 
 **Key methods:**
 1. `get_workflow_states(team_id)` - Get state name → ID mapping
@@ -177,21 +177,21 @@ ANTHROPIC_API_KEY
 
 ### Step 4: Git Worktree Manager
 **Files to create:**
-- `claudiar/git/__init__.py`
-- `claudiar/git/worktree.py` - Worktree operations
+- `claudear/git/__init__.py`
+- `claudear/git/worktree.py` - Worktree operations
 
 **Key methods:**
 1. `create(branch_name, issue_identifier)` - Create new worktree
 2. `remove(issue_identifier)` - Clean up worktree
 3. `list_worktrees()` - List active worktrees
 
-**Branch naming:** `claudiar/{issue-identifier}` (e.g., `claudiar/ENG-123`)
+**Branch naming:** `claudear/{issue-identifier}` (e.g., `claudear/ENG-123`)
 
 ---
 
 ### Step 5: GitHub Integration
 **Files to create:**
-- `claudiar/git/github.py` - PR creation via gh CLI
+- `claudear/git/github.py` - PR creation via gh CLI
 
 **Key methods:**
 1. `push_branch(worktree_path, branch_name)` - Git push
@@ -202,8 +202,8 @@ ANTHROPIC_API_KEY
 
 ### Step 6: Task State Machine
 **Files to create:**
-- `claudiar/tasks/__init__.py`
-- `claudiar/tasks/state.py` - TaskState enum and StateMachine class
+- `claudear/tasks/__init__.py`
+- `claudear/tasks/state.py` - TaskState enum and StateMachine class
 
 **States:**
 ```
@@ -223,7 +223,7 @@ PENDING → IN_PROGRESS ⟷ BLOCKED → FAILED
 
 ### Step 7: Task Store (Persistence)
 **Files to create:**
-- `claudiar/tasks/store.py` - SQLite persistence
+- `claudear/tasks/store.py` - SQLite persistence
 
 **Schema:**
 ```sql
@@ -250,9 +250,9 @@ CREATE TABLE tasks (
 
 ### Step 8: Claude Runner
 **Files to create:**
-- `claudiar/claude/__init__.py`
-- `claudiar/claude/runner.py` - Agent SDK session manager
-- `claudiar/claude/hooks.py` - Custom hooks
+- `claudear/claude/__init__.py`
+- `claudear/claude/runner.py` - Agent SDK session manager
+- `claudear/claude/hooks.py` - Custom hooks
 
 **Key functionality:**
 1. Build prompt from Linear issue (title, description)
@@ -283,7 +283,7 @@ When complete, say: "TASK_COMPLETE"
 
 ### Step 9: Task Manager (Orchestrator)
 **Files to create:**
-- `claudiar/tasks/manager.py` - Central orchestration
+- `claudear/tasks/manager.py` - Central orchestration
 
 **Key methods:**
 1. `start_task(issue)` - Full task initiation flow
@@ -301,10 +301,10 @@ When complete, say: "TASK_COMPLETE"
 
 ### Step 10: Webhook Server
 **Files to create:**
-- `claudiar/server/__init__.py`
-- `claudiar/server/app.py` - FastAPI application
-- `claudiar/server/routes/__init__.py`
-- `claudiar/server/routes/webhooks.py` - Linear webhook endpoint
+- `claudear/server/__init__.py`
+- `claudear/server/app.py` - FastAPI application
+- `claudear/server/routes/__init__.py`
+- `claudear/server/routes/webhooks.py` - Linear webhook endpoint
 
 **Endpoints:**
 - `POST /webhooks/linear` - Receive Linear events
@@ -324,7 +324,7 @@ When complete, say: "TASK_COMPLETE"
 
 ### Step 11: Main Entry Point
 **Files to create:**
-- `claudiar/main.py` - Application startup
+- `claudear/main.py` - Application startup
 
 **Startup sequence:**
 1. Load configuration
@@ -411,7 +411,7 @@ LOG_LEVEL=INFO
 
 ```toml
 [project]
-name = "claudiar"
+name = "claudear"
 version = "0.1.0"
 description = "Autonomous development automation with Claude Code and Linear"
 requires-python = ">=3.10"
@@ -435,7 +435,7 @@ dev = [
 ]
 
 [project.scripts]
-claudiar = "claudiar.main:main"
+claudear = "claudear.main:main"
 ```
 
 ---
@@ -579,5 +579,5 @@ Closes ENG-123
 2. Configure workflow states (Todo, In Progress, In Review, Done)
 3. Set up target repository
 4. Fill in .env with API keys
-5. Run `claudiar` to start server
+5. Run `claudear` to start server
 6. Move an issue to "Todo" and watch Claudiar work!

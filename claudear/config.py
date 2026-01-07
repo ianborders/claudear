@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
     # Database
-    db_path: str = "claudiar.db"
+    db_path: str = "claudear.db"
 
 
 # Global settings instance - loaded lazily

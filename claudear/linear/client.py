@@ -8,7 +8,7 @@ from typing import Optional
 
 import httpx
 
-from claudiar.linear.models import Comment, Issue, User, WorkflowState
+from claudear.linear.models import Comment, Issue, User, WorkflowState
 
 logger = logging.getLogger(__name__)
 

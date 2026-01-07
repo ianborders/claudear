@@ -10,7 +10,7 @@ from typing import Optional
 
 import uvicorn
 
-from claudiar.config import get_settings
+from claudear.config import get_settings
 
 # Track ngrok tunnel for cleanup
 _ngrok_tunnel = None
@@ -169,7 +169,7 @@ def main():
     logger.info(f"Starting server on {settings.webhook_host}:{settings.webhook_port}")
 
     uvicorn.run(
-        "claudiar.server.app:app",
+        "claudear.server.app:app",
         host=settings.webhook_host,
         port=settings.webhook_port,
         reload=False,

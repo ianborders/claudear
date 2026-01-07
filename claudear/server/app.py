@@ -6,13 +6,13 @@ from typing import Optional
 
 from fastapi import FastAPI
 
-from claudiar.config import get_settings
-from claudiar.git.github import GitHubClient
-from claudiar.git.worktree import WorktreeManager
-from claudiar.linear.client import LinearClient
-from claudiar.server.routes import health, webhooks
-from claudiar.tasks.manager import TaskManager
-from claudiar.tasks.store import TaskStore
+from claudear.config import get_settings
+from claudear.git.github import GitHubClient
+from claudear.git.worktree import WorktreeManager
+from claudear.linear.client import LinearClient
+from claudear.server.routes import health, webhooks
+from claudear.tasks.manager import TaskManager
+from claudear.tasks.store import TaskStore
 
 logger = logging.getLogger(__name__)
 

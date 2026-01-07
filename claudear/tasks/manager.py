@@ -9,14 +9,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, Optional
 
-from claudiar.claude.runner import ClaudeRunner, ClaudeRunnerPool, SessionResult
-from claudiar.config import Settings
-from claudiar.git.github import GitHubClient
-from claudiar.git.worktree import WorktreeManager
-from claudiar.linear.client import LinearClient
-from claudiar.linear.models import IssueWebhook
-from claudiar.tasks.state import TaskContext, TaskState, TaskStateMachine
-from claudiar.tasks.store import TaskRecord, TaskStore
+from claudear.claude.runner import ClaudeRunner, ClaudeRunnerPool, SessionResult
+from claudear.config import Settings
+from claudear.git.github import GitHubClient
+from claudear.git.worktree import WorktreeManager
+from claudear.linear.client import LinearClient
+from claudear.linear.models import IssueWebhook
+from claudear.tasks.state import TaskContext, TaskState, TaskStateMachine
+from claudear.tasks.store import TaskRecord, TaskStore
 
 logger = logging.getLogger(__name__)
 

@@ -1,5 +1,5 @@
 [project]
-name = "claudiar"
+name = "claudear"
 version = "0.1.0"
 description = "Autonomous development automation with Claude Code and Linear"
 readme = "README.md"
@@ -24,7 +24,7 @@ dev = [
 ]
 
 [project.scripts]
-claudiar = "claudiar.main:main"
+claudear = "claudear.main:main"
 
 [build-system]
 requires = ["hatchling"]

@@ -115,7 +115,7 @@ class WorktreeManager:
             WorktreeError: If worktree creation fails
         """
         safe_name = self._sanitize_name(issue_identifier)
-        branch_name = f"claudiar/{safe_name}"
+        branch_name = f"claudear/{safe_name}"
         worktree_path = self.worktrees_dir / safe_name
 
         # Check if worktree already exists
@@ -189,7 +189,7 @@ class WorktreeManager:
         """
         safe_name = self._sanitize_name(issue_identifier)
         worktree_path = self.worktrees_dir / safe_name
-        branch_name = f"claudiar/{safe_name}"
+        branch_name = f"claudear/{safe_name}"
 
         if not worktree_path.exists():
             logger.warning(f"Worktree does not exist: {worktree_path}")
@@ -330,4 +330,4 @@ class WorktreeManager:
             Branch name
         """
         safe_name = self._sanitize_name(issue_identifier)
-        return f"claudiar/{safe_name}"
+        return f"claudear/{safe_name}"

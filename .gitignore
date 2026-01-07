@@ -49,7 +49,7 @@ htmlcov/
 *.log
 logs/
 
-# Worktrees (managed by claudiar)
+# Worktrees (managed by claudear)
 .worktrees/
 
 # ngrok

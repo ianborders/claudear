@@ -10,7 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import AsyncIterator, Callable, Optional
 
-from claudiar.claude.hooks import (
+from claudear.claude.hooks import (
     BlockedDetection,
     CompletionDetection,
     build_prompt,
@@ -105,7 +105,7 @@ class ClaudeRunner:
         Returns:
             SessionResult with outcome
         """
-        session_id = f"claudiar-{uuid.uuid4().hex[:8]}"
+        session_id = f"claudear-{uuid.uuid4().hex[:8]}"
 
         self._session = ClaudeSession(
             session_id=session_id,

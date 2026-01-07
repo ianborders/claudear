@@ -10,7 +10,7 @@ from typing import Optional
 
 import aiosqlite
 
-from claudiar.tasks.state import TaskState
+from claudear.tasks.state import TaskState
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class TaskRecord:
 class TaskStore:
     """SQLite-based persistence for task records."""
 
-    def __init__(self, db_path: str = "claudiar.db"):
+    def __init__(self, db_path: str = "claudear.db"):
         """Initialize the task store.
 
         Args:

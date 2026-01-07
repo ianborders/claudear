@@ -7,15 +7,15 @@ from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Request
 
-from claudiar.config import get_settings
-from claudiar.linear.models import WebhookPayload
+from claudear.config import get_settings
+from claudear.linear.models import WebhookPayload
 
 logger = logging.getLogger(__name__)
 
 
 def get_task_manager():
     """Get task manager - imported lazily to avoid circular import."""
-    from claudiar.server.app import get_task_manager as _get_task_manager
+    from claudear.server.app import get_task_manager as _get_task_manager
     return _get_task_manager()
 
 router = APIRouter()
