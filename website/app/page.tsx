@@ -56,25 +56,26 @@ export default function Home() {
     <div className="min-h-screen">
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3 sm:gap-4">
             <a
               href="/"
               className="text-[11px] tracking-[2px] text-gray-900 hover:text-cyan-600 transition font-mono uppercase"
             >
               CLAUDEAR
             </a>
-            <div className="h-3 w-px bg-gray-300" />
-            <span className="text-[9px] tracking-[1px] text-gray-400 font-mono uppercase">
+            <div className="h-3 w-px bg-gray-300 hidden sm:block" />
+            <span className="text-[9px] tracking-[1px] text-gray-400 font-mono uppercase hidden sm:block">
               AUTONOMOUS_DEV
             </span>
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3 sm:gap-6">
             <a
               href="/docs"
-              className="text-[10px] tracking-[1px] text-gray-500 hover:text-gray-900 transition font-mono uppercase"
+              className="text-[10px] tracking-[1px] text-gray-500 hover:text-gray-900 transition font-mono uppercase flex items-center gap-1.5"
             >
-              DOCS
+              <BookOpen className="w-3.5 h-3.5 sm:hidden" />
+              <span className="hidden sm:inline">DOCS</span>
             </a>
             <a
               href="https://github.com/ianborders/claudear"
@@ -83,13 +84,14 @@ export default function Home() {
               className="text-[10px] tracking-[1px] text-gray-500 hover:text-gray-900 transition font-mono uppercase flex items-center gap-1.5"
             >
               <Github className="w-3.5 h-3.5" />
-              GITHUB
+              <span className="hidden sm:inline">GITHUB</span>
             </a>
             <a
               href="/docs/quickstart"
-              className="px-4 py-1.5 text-[9px] tracking-[1px] rounded-lg border border-emerald-500 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 transition font-mono uppercase"
+              className="px-3 sm:px-4 py-1.5 text-[9px] tracking-[1px] rounded-lg border border-emerald-500 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 transition font-mono uppercase"
             >
-              GET_STARTED
+              <span className="hidden sm:inline">GET_STARTED</span>
+              <span className="sm:hidden">START</span>
             </a>
           </div>
         </div>
