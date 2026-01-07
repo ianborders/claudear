@@ -12,13 +12,13 @@ interface DocPageProps {
 // Custom components for MDX
 const components = {
   h1: (props: React.HTMLAttributes<HTMLHeadingElement>) => (
-    <h1 className="text-3xl font-semibold text-gray-900 mb-6 mt-8 first:mt-0" {...props} />
+    <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 mb-4 sm:mb-6 mt-6 sm:mt-8 first:mt-0" {...props} />
   ),
   h2: (props: React.HTMLAttributes<HTMLHeadingElement>) => (
-    <h2 className="text-2xl font-semibold text-gray-900 mb-4 mt-8" {...props} />
+    <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-3 sm:mb-4 mt-6 sm:mt-8" {...props} />
   ),
   h3: (props: React.HTMLAttributes<HTMLHeadingElement>) => (
-    <h3 className="text-xl font-semibold text-gray-900 mb-3 mt-6" {...props} />
+    <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3 mt-4 sm:mt-6" {...props} />
   ),
   p: (props: React.HTMLAttributes<HTMLParagraphElement>) => (
     <p className="text-gray-600 leading-relaxed mb-4" {...props} />
@@ -121,7 +121,7 @@ export default async function DocPage({ params }: DocPageProps) {
   const nextDoc = currentIndex < allDocs.length - 1 ? allDocs[currentIndex + 1] : null;
 
   return (
-    <div className="max-w-3xl mx-auto px-8 py-12">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
       {/* Breadcrumb */}
       <div className="text-sm text-gray-500 mb-6">
         <Link href="/docs" className="hover:text-gray-700">
