@@ -12,6 +12,12 @@ Move a Linear issue from Backlog to "Todo" and Claudear takes over — it create
 pip install claudear
 ```
 
+#### Updating
+
+```bash
+pip install -U claudear
+```
+
 ### Option 2: From Source
 
 ```bash
