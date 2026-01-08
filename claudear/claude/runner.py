@@ -219,7 +219,7 @@ class ClaudeRunner:
         output_lines = []
         stderr_lines = []
 
-        # Read stdout
+        # Read stdout (note: Claude Code --print mode buffers all output until done)
         async for line in self._read_stream(self._process.stdout):
             output_lines.append(line)
             self._output_buffer.append(line)

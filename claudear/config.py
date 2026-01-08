@@ -71,6 +71,11 @@ class Settings(BaseSettings):
     comment_poll_interval: int = 30  # seconds
     blocked_timeout: int = 3600  # seconds (1 hour)
 
+    # Label Settings
+    labels_enabled: bool = True
+    labels_activity_enabled: bool = False  # Disabled - Claude Code doesn't stream output
+    labels_debounce_seconds: float = 2.0  # Minimum interval between activity updates
+
     # Logging
     log_level: str = "INFO"
 

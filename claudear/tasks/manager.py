@@ -9,11 +9,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, Optional
 
+from claudear.claude.activity import ActivityTracker
 from claudear.claude.runner import ClaudeRunner, ClaudeRunnerPool, SessionResult
 from claudear.config import Settings
 from claudear.git.github import GitHubClient
 from claudear.git.worktree import WorktreeManager
 from claudear.linear.client import LinearClient
+from claudear.linear.labels import LabelManager, MajorStateLabel
 from claudear.linear.models import IssueWebhook
 from claudear.tasks.state import TaskContext, TaskState, TaskStateMachine
 from claudear.tasks.store import TaskRecord, TaskStore
@@ -60,10 +62,23 @@ class TaskManager:
         self._lock = asyncio.Lock()
         self._comment_poll_task: Optional[asyncio.Task] = None
 
+        # Label management
+        self._label_manager: Optional[LabelManager] = None
+        self._activity_trackers: dict[str, ActivityTracker] = {}
+
     async def start(self) -> None:
         """Start the task manager."""
         # Initialize store
         await self.store.init()
+
+        # Initialize label manager if enabled
+        if self.settings.labels_enabled:
+            self._label_manager = LabelManager(
+                self.linear,
+                self.settings.linear_team_id,
+                debounce_seconds=self.settings.labels_debounce_seconds,
+            )
+            await self._label_manager.initialize()
 
         # Recover any in-progress tasks
         await self._recover_tasks()
@@ -195,12 +210,39 @@ class TaskManager:
                 f"- Status: In Progress",
             )
 
+            # 5b. Set WORKING label
+            if self._label_manager:
+                await self._label_manager.set_major_state(
+                    issue.id, MajorStateLabel.WORKING
+                )
+
             # 6. Create runner and start
+            # Set up activity tracking callback if enabled
+            on_output_callback = None
+            if (
+                self._label_manager
+                and self.settings.labels_activity_enabled
+            ):
+                tracker = ActivityTracker()
+                self._activity_trackers[issue.id] = tracker
+
+                def make_on_output(issue_id: str, tracker: ActivityTracker):
+                    def on_output(line: str) -> None:
+                        activity = tracker.process_line(line)
+                        if activity and self._label_manager:
+                            asyncio.create_task(
+                                self._label_manager.set_activity(issue_id, activity)
+                            )
+                    return on_output
+
+                on_output_callback = make_on_output(issue.id, tracker)
+
             runner = ClaudeRunner(
                 working_dir=worktree_path,
                 issue_identifier=issue.identifier,
                 title=issue.title,
                 description=issue.description,
+                on_output=on_output_callback,
                 on_blocked=lambda reason: asyncio.create_task(
                     self._handle_blocked(issue.id, reason)
                 ),
@@ -276,6 +318,13 @@ class TaskManager:
 
         # Update store
         await self.store.update_state(issue_id, TaskState.BLOCKED, reason)
+
+        # Update labels
+        if self._label_manager:
+            await self._label_manager.set_major_state(
+                issue_id, MajorStateLabel.BLOCKED
+            )
+            await self._label_manager.set_activity(issue_id, None)  # Clear activity
 
         # Post comment to Linear
         await self.linear.post_comment(
@@ -357,6 +406,19 @@ class TaskManager:
                 f"Ready for review.",
             )
 
+            # 5b. Update labels to COMPLETED + PR_READY
+            if self._label_manager:
+                await self._label_manager.set_major_state(
+                    issue_id, MajorStateLabel.COMPLETED
+                )
+                await self._label_manager.add_major_state(
+                    issue_id, MajorStateLabel.PR_READY
+                )
+                await self._label_manager.set_activity(issue_id, None)
+
+            # Clean up activity tracker
+            self._activity_trackers.pop(issue_id, None)
+
             # 6. Update state machine
             context.state_machine.submit_for_review()
             await self.store.update_state(issue_id, TaskState.IN_REVIEW)
@@ -380,6 +442,13 @@ class TaskManager:
                 active_task.context.state_machine.fail(error)
 
         await self.store.update_state(issue_id, TaskState.FAILED, error)
+
+        # Clear all labels on failure
+        if self._label_manager:
+            await self._label_manager.clear_all_labels(issue_id)
+
+        # Clean up activity tracker
+        self._activity_trackers.pop(issue_id, None)
 
         await self.linear.post_comment(
             issue_id,
@@ -412,6 +481,13 @@ class TaskManager:
 
         # Merge the PR if one exists
         if task.pr_number:
+            # Set MERGING label
+            if self._label_manager:
+                await self._label_manager.clear_all_labels(issue_id)
+                await self._label_manager.set_major_state(
+                    issue_id, MajorStateLabel.MERGING
+                )
+
             try:
                 repo_path = Path(self.settings.repo_path)
 
@@ -424,6 +500,12 @@ class TaskManager:
 
                 logger.info(f"Merged PR #{task.pr_number} for {task.issue_identifier}")
 
+                # Set MERGED label
+                if self._label_manager:
+                    await self._label_manager.set_major_state(
+                        issue_id, MajorStateLabel.MERGED
+                    )
+
                 # Post completion comment
                 await self.linear.post_comment(
                     issue_id,
@@ -433,12 +515,19 @@ class TaskManager:
 
             except Exception as e:
                 logger.error(f"Failed to merge PR for {task.issue_identifier}: {e}")
+                # Clear merging label on failure
+                if self._label_manager:
+                    await self._label_manager.clear_all_labels(issue_id)
                 await self.linear.post_comment(
                     issue_id,
                     f"🤖 **Claudear**: Failed to merge PR #{task.pr_number}.\n\n"
                     f"**Error**: {e}\n\n"
                     f"Please merge manually: {task.pr_url}",
                 )
+        else:
+            # No PR, just clear labels
+            if self._label_manager:
+                await self._label_manager.clear_all_labels(issue_id)
 
         await self.store.update_state(issue_id, TaskState.DONE)
 
@@ -471,6 +560,12 @@ class TaskManager:
         # Unblock and resume
         active_task.context.state_machine.unblock()
         await self.store.update_state(issue_id, TaskState.IN_PROGRESS)
+
+        # Update label back to WORKING
+        if self._label_manager:
+            await self._label_manager.set_major_state(
+                issue_id, MajorStateLabel.WORKING
+            )
 
         # Resume Claude session
         if active_task.runner:
