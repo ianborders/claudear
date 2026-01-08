@@ -135,9 +135,8 @@ class LabelManager:
         self._issue_major_labels: dict[str, Optional[MajorStateLabel]] = {}
         self._issue_activity_labels: dict[str, Optional[ActivityLabel]] = {}
 
-        # Debouncing for activity labels
+        # Debouncing for activity labels - tracks (last_activity, last_update_timestamp)
         self._pending_activity: dict[str, tuple[Optional[ActivityLabel], float]] = {}
-        self._debounce_task: Optional[asyncio.Task] = None
 
     async def initialize(self) -> None:
         """Ensure all Claudear labels exist in the team."""
@@ -227,6 +226,7 @@ class LabelManager:
 
         Only one activity label can be active at a time.
         Passing None removes all activity labels.
+        First activity applies immediately, subsequent updates are debounced.
 
         Args:
             issue_id: Linear issue ID
@@ -234,58 +234,42 @@ class LabelManager:
         """
         await self.initialize()
 
-        # Store pending activity with timestamp
-        self._pending_activity[issue_id] = (activity, datetime.now().timestamp())
+        current = self._issue_activity_labels.get(issue_id)
 
-        # Start debounce task if not running
-        if self._debounce_task is None or self._debounce_task.done():
-            self._debounce_task = asyncio.create_task(
-                self._process_pending_activities()
-            )
-
-    async def _process_pending_activities(self) -> None:
-        """Process pending activity label updates after debounce period."""
-        await asyncio.sleep(self.debounce_seconds)
+        # Skip if no change
+        if current == activity:
+            return
 
         now = datetime.now().timestamp()
 
-        for issue_id, (activity, timestamp) in list(self._pending_activity.items()):
-            # Only process if enough time has passed
-            if now - timestamp < self.debounce_seconds:
-                continue
+        # Check if we should debounce (skip if last update was recent)
+        last_update = self._pending_activity.get(issue_id)
+        if last_update and (now - last_update[1]) < self.debounce_seconds:
+            # Update pending activity but don't apply yet
+            self._pending_activity[issue_id] = (activity, last_update[1])
+            return
 
-            current = self._issue_activity_labels.get(issue_id)
+        # Apply immediately
+        try:
+            # Remove current activity label
+            if current:
+                current_config = ACTIVITY_LABELS[current]
+                label_id = self._label_ids[current_config.name]
+                await self.client.remove_label_from_issue(issue_id, label_id, silent=True)
 
-            # Skip if no change
-            if current == activity:
-                del self._pending_activity[issue_id]
-                continue
+            # Add new activity label
+            if activity:
+                new_config = ACTIVITY_LABELS[activity]
+                label_id = self._label_ids[new_config.name]
+                await self.client.add_label_to_issue(issue_id, label_id)
+                logger.info(f"Activity: {activity.value} on {issue_id}")
 
-            try:
-                # Remove current activity label
-                if current:
-                    current_config = ACTIVITY_LABELS[current]
-                    label_id = self._label_ids[current_config.name]
-                    await self.client.remove_label_from_issue(issue_id, label_id)
+            self._issue_activity_labels[issue_id] = activity
+            # Track when we last applied an update for debouncing
+            self._pending_activity[issue_id] = (activity, now)
+        except Exception as e:
+            logger.warning(f"Failed to update activity label: {e}")
 
-                # Add new activity label
-                if activity:
-                    new_config = ACTIVITY_LABELS[activity]
-                    label_id = self._label_ids[new_config.name]
-                    await self.client.add_label_to_issue(issue_id, label_id)
-                    logger.debug(f"Activity: {activity.value} on {issue_id}")
-
-                self._issue_activity_labels[issue_id] = activity
-            except Exception as e:
-                logger.warning(f"Failed to update activity label: {e}")
-
-            del self._pending_activity[issue_id]
-
-        # Reschedule if more pending
-        if self._pending_activity:
-            self._debounce_task = asyncio.create_task(
-                self._process_pending_activities()
-            )
 
     async def clear_all_labels(self, issue_id: str) -> None:
         """Remove all Claudear labels from an issue.

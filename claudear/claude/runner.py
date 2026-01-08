@@ -1,8 +1,9 @@
-"""Claude Code runner using CLI in headless mode."""
+"""Claude Code runner using CLI in headless mode with streaming JSON output."""
 from __future__ import annotations
 
 
 import asyncio
+import json
 import logging
 import uuid
 from dataclasses import dataclass, field
@@ -67,6 +68,7 @@ class ClaudeRunner:
         on_output: Optional[Callable[[str], None]] = None,
         on_blocked: Optional[Callable[[str], None]] = None,
         on_complete: Optional[Callable[[], None]] = None,
+        on_tool_use: Optional[Callable[[str], None]] = None,
     ):
         """Initialize the Claude runner.
 
@@ -78,6 +80,7 @@ class ClaudeRunner:
             on_output: Callback for output (streaming)
             on_blocked: Callback when blocked (receives reason)
             on_complete: Callback when task completes
+            on_tool_use: Callback when tool is used (receives tool name)
         """
         self.working_dir = Path(working_dir)
         self.issue_identifier = issue_identifier
@@ -86,6 +89,7 @@ class ClaudeRunner:
         self.on_output = on_output
         self.on_blocked = on_blocked
         self.on_complete = on_complete
+        self.on_tool_use = on_tool_use
 
         self._session: Optional[ClaudeSession] = None
         self._process: Optional[asyncio.subprocess.Process] = None
@@ -186,12 +190,13 @@ class ClaudeRunner:
         Returns:
             SessionResult
         """
-        # Build command
+        # Build command - use stream-json for real-time tool event streaming
         cmd = [
             "claude",
             "--print",  # Non-interactive mode
+            "--verbose",  # Required for stream-json with --print
             "--output-format",
-            "text",
+            "stream-json",  # JSONL streaming for real-time tool events
             "--dangerously-skip-permissions",  # Auto-accept permissions
         ]
 
@@ -217,9 +222,10 @@ class ClaudeRunner:
 
         # Collect output
         output_lines = []
+        text_content = []  # Extracted text for blocked/complete detection
         stderr_lines = []
 
-        # Read stdout (note: Claude Code --print mode buffers all output until done)
+        # Read stdout - stream-json outputs JSONL (one JSON object per line)
         async for line in self._read_stream(self._process.stdout):
             output_lines.append(line)
             self._output_buffer.append(line)
@@ -227,20 +233,25 @@ class ClaudeRunner:
             if self.on_output:
                 self.on_output(line)
 
-            # Check for blocked state
-            blocked = detect_blocked(line)
-            if blocked.is_blocked:
-                self._session.is_blocked = True
-                self._session.blocked_reason = blocked.reason
-                if self.on_blocked:
-                    self.on_blocked(blocked.reason or "Unknown reason")
+            # Parse JSON line to extract tool events and text
+            extracted_text = self._parse_json_line(line)
+            if extracted_text:
+                text_content.append(extracted_text)
 
-            # Check for completion
-            completion = detect_completion(line)
-            if completion.is_complete:
-                self._session.is_complete = True
-                if self.on_complete:
-                    self.on_complete()
+                # Check for blocked state
+                blocked = detect_blocked(extracted_text)
+                if blocked.is_blocked:
+                    self._session.is_blocked = True
+                    self._session.blocked_reason = blocked.reason
+                    if self.on_blocked:
+                        self.on_blocked(blocked.reason or "Unknown reason")
+
+                # Check for completion
+                completion = detect_completion(extracted_text)
+                if completion.is_complete:
+                    self._session.is_complete = True
+                    if self.on_complete:
+                        self.on_complete()
 
         # Read stderr
         if self._process.stderr:
@@ -252,11 +263,12 @@ class ClaudeRunner:
         await self._process.wait()
 
         full_output = "\n".join(output_lines)
+        full_text = "\n".join(text_content)
         self._session.last_output = full_output
 
         # Final check for blocked/complete if not detected during streaming
         if not self._session.is_blocked:
-            blocked = detect_blocked(full_output)
+            blocked = detect_blocked(full_text)
             if blocked.is_blocked:
                 self._session.is_blocked = True
                 self._session.blocked_reason = blocked.reason
@@ -264,7 +276,7 @@ class ClaudeRunner:
                     self.on_blocked(blocked.reason or "Unknown reason")
 
         if not self._session.is_complete:
-            completion = detect_completion(full_output)
+            completion = detect_completion(full_text)
             if completion.is_complete:
                 self._session.is_complete = True
                 if self.on_complete:
@@ -295,6 +307,57 @@ class ClaudeRunner:
             if not line:
                 break
             yield line.decode().rstrip()
+
+    def _parse_json_line(self, line: str) -> Optional[str]:
+        """Parse a JSON line from stream-json output.
+
+        Extracts tool_use events and calls on_tool_use callback.
+        Returns extracted text content for blocked/completion detection.
+
+        Args:
+            line: JSON line from Claude output
+
+        Returns:
+            Extracted text content, or None if no text
+        """
+        if not line.strip():
+            return None
+
+        try:
+            data = json.loads(line)
+        except json.JSONDecodeError:
+            # Not valid JSON, treat as raw text
+            logger.debug(f"Non-JSON line: {line[:80]}")
+            return line
+
+        # Extract text content and tool events from message
+        text_parts = []
+        message = data.get("message", {})
+        content = message.get("content", [])
+
+        if isinstance(content, list):
+            for item in content:
+                if isinstance(item, dict):
+                    item_type = item.get("type")
+
+                    if item_type == "text":
+                        # Text content
+                        text = item.get("text", "")
+                        if text:
+                            text_parts.append(text)
+
+                    elif item_type == "tool_use":
+                        # Tool use event - extract name and call callback
+                        tool_name = item.get("name")
+                        if tool_name and self.on_tool_use:
+                            self.on_tool_use(tool_name)
+
+        # Also check for result content (tool results)
+        result = data.get("result")
+        if result:
+            text_parts.append(str(result))
+
+        return " ".join(text_parts) if text_parts else None
 
     async def cancel(self) -> None:
         """Cancel the running session."""
@@ -329,6 +392,7 @@ class ClaudeRunnerPool:
         description: Optional[str] = None,
         on_blocked: Optional[Callable[[str], None]] = None,
         on_complete: Optional[Callable[[], None]] = None,
+        on_tool_use: Optional[Callable[[str], None]] = None,
     ) -> SessionResult:
         """Start a new runner.
 
@@ -340,6 +404,7 @@ class ClaudeRunnerPool:
             description: Issue description
             on_blocked: Blocked callback
             on_complete: Complete callback
+            on_tool_use: Tool use callback (receives tool name)
 
         Returns:
             SessionResult
@@ -352,6 +417,7 @@ class ClaudeRunnerPool:
                 description=description,
                 on_blocked=on_blocked,
                 on_complete=on_complete,
+                on_tool_use=on_tool_use,
             )
 
             self._runners[issue_id] = runner

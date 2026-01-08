@@ -73,7 +73,7 @@ class Settings(BaseSettings):
 
     # Label Settings
     labels_enabled: bool = True
-    labels_activity_enabled: bool = False  # Disabled - Claude Code doesn't stream output
+    labels_activity_enabled: bool = True  # Uses stream-json for real-time tool events
     labels_debounce_seconds: float = 2.0  # Minimum interval between activity updates
 
     # Logging

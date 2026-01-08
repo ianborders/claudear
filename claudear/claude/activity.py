@@ -11,6 +11,40 @@ from claudear.linear.labels import ActivityLabel
 logger = logging.getLogger(__name__)
 
 
+# Mapping of Claude Code tool names to activity labels
+TOOL_NAME_TO_ACTIVITY: dict[str, ActivityLabel] = {
+    # Reading tools
+    "Read": ActivityLabel.READING,
+    "Glob": ActivityLabel.SEARCHING,
+    "Grep": ActivityLabel.SEARCHING,
+    # Writing/editing tools
+    "Edit": ActivityLabel.EDITING,
+    "Write": ActivityLabel.EDITING,
+    "NotebookEdit": ActivityLabel.EDITING,
+    # Bash - categorize based on common patterns (default to TESTING for builds/tests)
+    "Bash": ActivityLabel.TESTING,  # Default - often used for tests/builds
+    # Search tools
+    "WebSearch": ActivityLabel.SEARCHING,
+    "WebFetch": ActivityLabel.SEARCHING,
+    # Task/agent tools
+    "Task": ActivityLabel.THINKING,
+    # Todo tracking
+    "TodoWrite": ActivityLabel.THINKING,
+}
+
+
+def get_activity_for_tool(tool_name: str) -> Optional[ActivityLabel]:
+    """Get activity label for a Claude Code tool name.
+
+    Args:
+        tool_name: Name of the tool (e.g., "Read", "Edit", "Bash")
+
+    Returns:
+        ActivityLabel or None if tool not mapped
+    """
+    return TOOL_NAME_TO_ACTIVITY.get(tool_name)
+
+
 @dataclass
 class ActivityDetection:
     """Result of activity detection."""

@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, Optional
 
-from claudear.claude.activity import ActivityTracker
+from claudear.claude.activity import ActivityTracker, get_activity_for_tool
 from claudear.claude.runner import ClaudeRunner, ClaudeRunnerPool, SessionResult
 from claudear.config import Settings
 from claudear.git.github import GitHubClient
@@ -217,32 +217,34 @@ class TaskManager:
                 )
 
             # 6. Create runner and start
-            # Set up activity tracking callback if enabled
-            on_output_callback = None
+            # Set up tool use callback for activity tracking (uses stream-json)
+            on_tool_use_callback = None
             if (
                 self._label_manager
                 and self.settings.labels_activity_enabled
             ):
-                tracker = ActivityTracker()
-                self._activity_trackers[issue.id] = tracker
+                # Track last activity to avoid redundant updates
+                last_activity = {"value": None}
 
-                def make_on_output(issue_id: str, tracker: ActivityTracker):
-                    def on_output(line: str) -> None:
-                        activity = tracker.process_line(line)
-                        if activity and self._label_manager:
-                            asyncio.create_task(
-                                self._label_manager.set_activity(issue_id, activity)
-                            )
-                    return on_output
+                def make_on_tool_use(issue_id: str):
+                    def on_tool_use(tool_name: str) -> None:
+                        activity = get_activity_for_tool(tool_name)
+                        if activity and activity != last_activity["value"]:
+                            last_activity["value"] = activity
+                            if self._label_manager:
+                                asyncio.create_task(
+                                    self._label_manager.set_activity(issue_id, activity)
+                                )
+                    return on_tool_use
 
-                on_output_callback = make_on_output(issue.id, tracker)
+                on_tool_use_callback = make_on_tool_use(issue.id)
 
             runner = ClaudeRunner(
                 working_dir=worktree_path,
                 issue_identifier=issue.identifier,
                 title=issue.title,
                 description=issue.description,
-                on_output=on_output_callback,
+                on_tool_use=on_tool_use_callback,
                 on_blocked=lambda reason: asyncio.create_task(
                     self._handle_blocked(issue.id, reason)
                 ),
