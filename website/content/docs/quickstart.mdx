@@ -9,10 +9,18 @@ order: 2
 
 Get Claudear running in under 5 minutes with this quick setup guide.
 
-## 1. Install Claudear
+## 1. Clone and Install
 
 ```bash
+# 1. Clone the repository
+git clone https://github.com/ianborders/claudear.git
+cd claudear
+
+# 2. Install the claudear command
 pip install claudear
+
+# 3. Create your config
+cp .env.example .env
 ```
 
 ### Updating
@@ -23,9 +31,9 @@ To update to the latest version:
 pip install -U claudear
 ```
 
-## 2. Create Configuration
+## 2. Configure
 
-Create a `.env` file in your project directory:
+Edit `.env` with your values:
 
 ```bash
 # Linear Integration
@@ -48,9 +56,14 @@ NGROK_AUTHTOKEN=your-ngrok-token
 
 ## 3. Start Claudear
 
+Run from the cloned repository directory:
+
 ```bash
+cd claudear
 claudear
 ```
+
+> **Important:** Always run `claudear` from the cloned repository directory. Configuration is loaded from `.env` in the current working directory.
 
 Claudear will:
 1. Start the webhook server on port 8000

@@ -6,34 +6,36 @@ Move a Linear issue from Backlog to "Todo" and Claudear takes over — it create
 
 ## Installation
 
-### Option 1: pip (Recommended)
-
 ```bash
+# 1. Clone the repository
+git clone https://github.com/ianborders/claudear.git
+cd claudear
+
+# 2. Install the claudear command
 pip install claudear
+
+# 3. Create your config
+cp .env.example .env
 ```
 
-#### Updating
+Edit `.env` with your API keys (see [Configuration](#configuration) below).
+
+### Updating
 
 ```bash
 pip install -U claudear
 ```
 
-### Option 2: From Source
-
-```bash
-git clone https://github.com/ianborders/claudear.git
-cd claudear
-pip install -e .
-```
-
 ## Quick Start
 
-1. **Create your config file** at `~/.config/claudear/.env` (see [Configuration](#configuration) below)
+Start Claudear from the cloned directory:
 
-2. **Start watching for tasks:**
-   ```bash
-   claudear
-   ```
+```bash
+cd claudear
+claudear
+```
+
+> **Important:** Always run `claudear` from the cloned repository directory. Configuration is loaded from `.env` in the current working directory.
 
 ## How It Works
 
