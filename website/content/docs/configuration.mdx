@@ -27,7 +27,7 @@ cp .env.example .env
 |----------|-------------|
 | `LINEAR_API_KEY` | Your Linear API key. Get it from Linear Settings → API |
 | `LINEAR_WEBHOOK_SECRET` | Secret for webhook signature verification |
-| `LINEAR_TEAM_ID` | UUID of your Linear team |
+| `LINEAR_TEAM_ID` | Your team key (e.g., `ENG`, `CLA`) - see [Finding Your Team Key](#finding-your-team-key) |
 
 ### Linear Workflow States
 
@@ -87,7 +87,7 @@ cp .env.example .env
 # Linear Integration
 LINEAR_API_KEY=lin_api_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 LINEAR_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-LINEAR_TEAM_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+LINEAR_TEAM_ID=ENG  # Your team key from the URL
 
 # Workflow States
 LINEAR_STATE_TODO=Todo
@@ -126,3 +126,22 @@ openssl rand -hex 32
 ```
 
 Use this value for both `LINEAR_WEBHOOK_SECRET` and when registering the webhook in Linear.
+
+## Finding Your Team Key
+
+Your team key is the short identifier (2-4 characters) that appears in Linear URLs.
+
+**From any Linear URL:**
+
+Look at the URL when viewing your Linear board or any issue:
+- `linear.app/ENG/issue/ENG-123` → team key is `ENG`
+- `linear.app/CLA/board` → team key is `CLA`
+
+The team key is the segment right after `linear.app/`.
+
+**From Team Settings:**
+
+1. Go to Linear Settings → Team Settings
+2. Your team key is displayed at the top
+
+> **Note:** You can use either the team key (like `ENG`) or the full UUID. Claudear automatically resolves team keys to UUIDs.
