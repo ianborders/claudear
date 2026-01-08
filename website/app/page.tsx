@@ -173,7 +173,7 @@ export default function Home() {
                 <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
                 <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/60" />
               </div>
-              <CopyButton text="pip install claudear" />
+              <CopyButton text="git clone https://github.com/ianborders/claudear.git && cd claudear && pip install claudear" />
             </div>
             <div className="p-6 flex flex-col items-center gap-4">
               <Image
@@ -184,8 +184,24 @@ export default function Home() {
                 className="opacity-90"
                 priority
               />
-              <pre className="w-full">
-                <code>
+              <pre className="w-full text-left">
+                <code className="block">
+                  <span className="text-gray-500"># 1. Clone the repository</span>
+                </code>
+                <code className="block">
+                  <span className="text-gray-500">$</span>{' '}
+                  <span className="text-emerald-400">git clone</span>{' '}
+                  <span className="text-cyan-400">https://github.com/ianborders/claudear.git</span>
+                </code>
+                <code className="block">
+                  <span className="text-gray-500">$</span>{' '}
+                  <span className="text-emerald-400">cd</span>{' '}
+                  <span className="text-cyan-400">claudear</span>
+                </code>
+                <code className="block mt-2">
+                  <span className="text-gray-500"># 2. Install the claudear command</span>
+                </code>
+                <code className="block">
                   <span className="text-gray-500">$</span>{' '}
                   <span className="text-emerald-400">pip install</span>{' '}
                   <span className="text-cyan-400">claudear</span>
