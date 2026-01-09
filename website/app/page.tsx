@@ -102,11 +102,22 @@ export default function Home() {
         <TopoPattern seed={42} complexity="complex" opacity={0.08} />
         <div className="max-w-4xl mx-auto text-center relative z-10">
           <ScaleIn>
-            <div
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 text-[9px] tracking-[1px] font-mono mb-6"
-            >
-              <Sparkles className="w-3 h-3" />
-              OPEN_SOURCE
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <div
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 text-[9px] tracking-[1px] font-mono"
+              >
+                <Sparkles className="w-3 h-3" />
+                OPEN_SOURCE
+              </div>
+              <a
+                href="https://clotion.dev"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-cyan-500/30 bg-cyan-500/10 text-cyan-600 text-[9px] tracking-[1px] font-mono hover:bg-cyan-500/20 transition"
+              >
+                <ArrowRight className="w-3 h-3" />
+                CLOTION: NOTION + CLAUDE_CODE
+              </a>
             </div>
           </ScaleIn>
           <ScaleIn delay={0.1}>
