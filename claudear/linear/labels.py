@@ -34,6 +34,17 @@ class ActivityLabel(Enum):
     SEARCHING = "claudear:searching"
     THINKING = "claudear:thinking"
 
+    @property
+    def display_text(self) -> str:
+        """Get display text with emoji for Notion/status display."""
+        return {
+            ActivityLabel.READING: "📖 Reading files...",
+            ActivityLabel.EDITING: "✏️ Editing code...",
+            ActivityLabel.TESTING: "🧪 Running tests...",
+            ActivityLabel.SEARCHING: "🔍 Searching...",
+            ActivityLabel.THINKING: "🤔 Thinking...",
+        }.get(self, "Working...")
+
 
 @dataclass
 class LabelConfig:

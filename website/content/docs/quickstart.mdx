@@ -33,7 +33,9 @@ pip install -U claudear
 
 ## 2. Configure
 
-Edit `.env` with your values:
+Claudear auto-detects which providers to enable based on your `.env` file. Configure one or both:
+
+### Option A: Linear Only
 
 ```bash
 # Linear Integration
@@ -41,18 +43,31 @@ LINEAR_API_KEY=lin_api_xxxxxxxxxxxxx
 LINEAR_WEBHOOK_SECRET=your-webhook-secret
 LINEAR_TEAM_ID=ENG  # Your team key from the URL (linear.app/ENG/...)
 
-# Linear Workflow States (customize to match your board)
-LINEAR_STATE_TODO=Todo
-LINEAR_STATE_IN_PROGRESS=In Progress
-LINEAR_STATE_IN_REVIEW=In Review
-LINEAR_STATE_DONE=Done
+# Repository
+REPO_PATH=/path/to/your/repo
+
+# ngrok (required for Linear webhooks)
+NGROK_AUTHTOKEN=your-ngrok-token
+```
+
+### Option B: Notion Only
+
+```bash
+# Notion Integration
+NOTION_API_KEY=secret_xxxxxxxxxxxxx
+NOTION_DATABASE_ID=your-database-id
+NOTION_POLL_INTERVAL=5
 
 # Repository
 REPO_PATH=/path/to/your/repo
 
-# ngrok (for webhook tunneling)
-NGROK_AUTHTOKEN=your-ngrok-token
+# GitHub (for PR creation)
+GITHUB_TOKEN=ghp_xxxxxxxxxxxxx
 ```
+
+### Option C: Both Providers
+
+Configure both sets of variables - Claudear will run them simultaneously.
 
 ## 3. Start Claudear
 
@@ -65,20 +80,47 @@ claudear
 
 > **Important:** Always run `claudear` from the cloned repository directory. Configuration is loaded from `.env` in the current working directory.
 
+### What Happens on Startup
+
 Claudear will:
-1. Start the webhook server on port 8000
-2. Create an ngrok tunnel
-3. Register the webhook with Linear (first run only)
-4. Begin listening for issue updates
+
+1. Detect configured providers (Linear, Notion, or both)
+2. For Linear: Start webhook server on port 8000, create ngrok tunnel
+3. For Notion: Start polling at configured interval
+4. Display a banner showing active providers and instances
+
+Example output:
+```
+╔════════════════════════════════════════════════════════════════╗
+║                          CLAUDEAR                               ║
+║             Multi-Provider Development Automation               ║
+╠════════════════════════════════════════════════════════════════╣
+║  LINEAR PROVIDER                                                ║
+║    ✓ ENG → /Users/dev/my-project                               ║
+║                                                                 ║
+║  NOTION PROVIDER                                                ║
+║    ✓ abc123 → /Users/dev/my-project                            ║
+║                                                                 ║
+║  Max concurrent tasks: 5                                        ║
+╚════════════════════════════════════════════════════════════════╝
+```
 
 ## 4. Test It
+
+### Testing Linear
 
 1. Go to your Linear board
 2. Move any issue from **Backlog** to **Todo**
 3. Watch Claudear pick up the task!
 
+### Testing Notion
+
+1. Go to your Notion database
+2. Change a page's status to **Todo** (or your configured todo status)
+3. Wait for the next poll cycle (default: 5 seconds)
+
 You'll see output in your terminal as Claude Code:
-- Creates a worktree for the issue
+- Creates a worktree for the task
 - Analyzes the requirements
 - Implements the solution
 - Creates a PR
@@ -88,3 +130,4 @@ You'll see output in your terminal as Claude Code:
 - [Configuration](/docs/configuration) - Full environment variable reference
 - [How It Works](/docs/workflow) - Understand the task lifecycle
 - [Linear Setup](/docs/linear-webhook) - Detailed webhook configuration
+- [Notion Setup](/docs/notion-setup) - Notion integration details

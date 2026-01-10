@@ -126,7 +126,7 @@ export default function Home() {
               style={{ fontWeight: 300 }}
             >
               Autonomous Development with
-              <span className="flex items-center justify-center gap-3 mt-2">
+              <span className="flex items-center justify-center gap-3 mt-2 flex-wrap">
                 <Image
                   src="/Claude-Logo.svg"
                   alt="Claude"
@@ -142,6 +142,8 @@ export default function Home() {
                   height={35}
                   className="h-8 md:h-10 w-auto"
                 />
+                <span className="text-gray-400 text-2xl md:text-3xl">+</span>
+                <span className="text-2xl md:text-3xl font-normal">Notion</span>
               </span>
             </h1>
           </ScaleIn>
@@ -150,8 +152,8 @@ export default function Home() {
               className="text-lg text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed"
               style={{ fontWeight: 300 }}
             >
-              Hand off Linear issues to Claude Code. Claudear implements, tests, creates PRs, and manages the full
-              lifecycle. Let Claude Code do the coding while you focus on what matters.
+              Hand off Linear issues or Notion tasks to Claude Code. Claudear implements, tests, creates PRs, and manages the full
+              lifecycle. Multi-provider, multi-team support. Let Claude Code do the coding while you focus on what matters.
             </p>
           </ScaleIn>
           <ScaleIn delay={0.3}>
@@ -255,8 +257,8 @@ export default function Home() {
               <StepCard
                 number="01"
                 label="Trigger"
-                title="Move issue to Todo"
-                description="Drag a Linear issue from Backlog to Todo. Claudear's webhook picks it up instantly."
+                title="Move task to Todo"
+                description="Move a Linear issue or Notion page to Todo. Claudear picks it up via webhook or polling."
                 accentColor="cyan"
                 topoSeed={1}
               />
@@ -337,8 +339,8 @@ export default function Home() {
             <StaggerItem>
               <IconFeatureCard
                 icon={<Zap className="w-5 h-5" />}
-                label="Linear Integration"
-                description="Webhooks receive events in real-time. State changes trigger automation seamlessly."
+                label="Multi-Provider"
+                description="Linear webhooks + Notion polling. Run multiple teams and databases simultaneously."
                 accentColor="cyan"
                 topoSeed={10}
               />

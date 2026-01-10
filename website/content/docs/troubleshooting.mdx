@@ -9,7 +9,7 @@ order: 7
 
 Solutions to common issues you might encounter with Claudear.
 
-## Connection Issues
+## Linear Issues
 
 ### ngrok Tunnel Not Starting
 
@@ -62,6 +62,91 @@ Solutions to common issues you might encounter with Claudear.
    - Click on your webhook
    - Check delivery history
 
+### Wrong State IDs
+
+**Symptoms:**
+- Issues not picked up
+- State changes not detected
+
+**Solutions:**
+
+1. **Verify state names match exactly:**
+   ```bash
+   LINEAR_STATE_TODO=Todo  # Must match Linear exactly
+   ```
+
+2. **Check case sensitivity:**
+   - Linear state names are case-sensitive
+
+## Notion Issues
+
+### Tasks Not Being Picked Up
+
+**Symptoms:**
+- Pages moved to Todo are ignored
+- No polling activity in logs
+
+**Solutions:**
+
+1. **Verify database is shared with integration:**
+   - Open database → ... → Add connections
+   - Check "Claudear" is listed
+
+2. **Check status value matches:**
+   ```bash
+   NOTION_STATUS_TODO=ToDo  # Must match exactly
+   ```
+
+3. **Verify database ID:**
+   ```bash
+   # Check ID is correct (32 chars, no hyphens in env var name)
+   NOTION_DATABASE_ID=abc123def456
+   ```
+
+4. **Check polling is running:**
+   - Look for "Polling Notion database" in logs
+
+### Unauthorized Errors
+
+**Symptoms:**
+- "API token is invalid" errors
+- 401 responses in logs
+
+**Solutions:**
+
+1. **Check API key is valid:**
+   - Regenerate at notion.so/my-integrations
+
+2. **Verify database is shared:**
+   - Each database must explicitly add the integration
+
+### Properties Not Appearing
+
+**Symptoms:**
+- Claudear ID, Branch, etc. not showing on pages
+
+**Solutions:**
+
+1. Claudear creates properties on first task pickup
+2. Trigger a task by moving a page to "Todo"
+3. Check logs for property creation errors
+4. Verify integration has "Update content" capability
+
+### Rate Limiting
+
+**Symptoms:**
+- 429 errors in logs
+- Tasks not being picked up consistently
+
+**Solutions:**
+
+1. **Increase poll interval:**
+   ```bash
+   NOTION_POLL_INTERVAL=30
+   ```
+
+2. **Reduce number of databases**
+
 ## Task Execution Issues
 
 ### Claude Not Starting
@@ -92,11 +177,11 @@ Solutions to common issues you might encounter with Claudear.
 
 **Symptoms:**
 - Tasks immediately fail
-- Error comments on issues
+- Error comments on tasks
 
 **Solutions:**
 
-1. **Check the error message** in the Linear comment
+1. **Check the error message** in the comment
 2. **Review logs:**
    ```bash
    LOG_LEVEL=DEBUG claudear
@@ -132,28 +217,6 @@ Solutions to common issues you might encounter with Claudear.
    df -h
    ```
 
-## Linear Integration Issues
-
-### Wrong State IDs
-
-**Symptoms:**
-- Issues not picked up
-- State changes not detected
-
-**Solutions:**
-
-1. **Verify state names match exactly:**
-   ```bash
-   # In .env
-   LINEAR_STATE_TODO=Todo  # Must match Linear exactly
-   ```
-
-2. **Check case sensitivity:**
-   - Linear state names are case-sensitive
-
-3. **List available states:**
-   - Check your Linear board settings
-
 ### Comments Not Detected
 
 **Symptoms:**
@@ -170,9 +233,42 @@ Solutions to common issues you might encounter with Claudear.
 2. **Verify you're commenting as yourself:**
    - Comments from bots/integrations may be ignored
 
-3. **Manual unblock:**
+## Multi-Provider Issues
+
+### Wrong Repository Used
+
+**Symptoms:**
+- Task creates worktree in wrong repo
+- PR created in wrong repo
+
+**Solutions:**
+
+1. **Check per-instance repo paths:**
    ```bash
-   claudear unblock ISSUE-123
+   LINEAR_ENG_REPO=/correct/path/for/eng
+   NOTION_ABC123_REPO=/correct/path/for/abc123
+   ```
+
+2. **Verify team/database ID matches:**
+   - Check startup banner shows correct mappings
+
+### Database Schema Errors
+
+**Symptoms:**
+- "no such column: provider" errors
+- SQLite errors on startup
+
+**Solutions:**
+
+1. **Run migration:**
+   ```bash
+   python -m claudear.scripts.migrate_db
+   ```
+
+2. **Or delete and recreate:**
+   ```bash
+   rm claudear.db
+   claudear  # Creates fresh database
    ```
 
 ## Performance Issues
@@ -204,27 +300,6 @@ Solutions to common issues you might encounter with Claudear.
 2. **Use local base branch:**
    - Ensure `main` is up to date locally
 
-## Database Issues
-
-### Corrupted Database
-
-**Symptoms:**
-- SQLite errors in logs
-- Tasks not persisting
-
-**Solutions:**
-
-1. **Backup and recreate:**
-   ```bash
-   mv claudear.db claudear.db.backup
-   claudear  # Creates fresh database
-   ```
-
-2. **Check file permissions:**
-   ```bash
-   ls -la claudear.db
-   ```
-
 ## Getting Help
 
 If none of these solutions work:
@@ -234,10 +309,15 @@ If none of these solutions work:
    LOG_LEVEL=DEBUG claudear 2>&1 | tee debug.log
    ```
 
-2. **Check GitHub Issues:**
+2. **Test the multi-provider setup:**
+   ```bash
+   python -m claudear.scripts.test_multi_provider
+   ```
+
+3. **Check GitHub Issues:**
    [github.com/ianborders/claudear/issues](https://github.com/ianborders/claudear/issues)
 
-3. **Open a new issue** with:
+4. **Open a new issue** with:
    - Debug logs (sanitized)
    - Steps to reproduce
    - Environment info (OS, Python version)

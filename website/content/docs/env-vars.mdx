@@ -13,21 +13,77 @@ Complete reference of all environment variables supported by Claudear.
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `LINEAR_API_KEY` | Yes | - | Linear API key for authentication |
-| `LINEAR_WEBHOOK_SECRET` | Yes | - | Secret for webhook signature verification |
-| `LINEAR_TEAM_ID` | Yes | - | UUID of your Linear team |
-| `LINEAR_STATE_TODO` | No | `Todo` | State name that triggers task pickup |
-| `LINEAR_STATE_IN_PROGRESS` | No | `In Progress` | State name while working |
-| `LINEAR_STATE_IN_REVIEW` | No | `In Review` | State name after PR creation |
-| `LINEAR_STATE_DONE` | No | `Done` | State name for completion |
+| `LINEAR_API_KEY` | Yes* | - | Linear API key for authentication |
+| `LINEAR_WEBHOOK_SECRET` | Yes* | - | Secret for webhook signature verification |
+| `LINEAR_TEAM_ID` | Yes* | - | Single team key (e.g., `ENG`) |
+| `LINEAR_TEAM_IDS` | No | - | Multiple teams, comma-separated (e.g., `ENG,INFRA`) |
+
+*Required if using Linear provider
+
+### Per-Team Repository Paths
+
+When using multiple teams, specify a repository for each:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `LINEAR_{TEAM}_REPO` | Yes* | Repository path for team (e.g., `LINEAR_ENG_REPO`) |
+
+*Required when using `LINEAR_TEAM_IDS`
+
+### Linear Workflow States
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LINEAR_STATE_TODO` | `Todo` | State name that triggers task pickup |
+| `LINEAR_STATE_IN_PROGRESS` | `In Progress` | State name while working |
+| `LINEAR_STATE_IN_REVIEW` | `In Review` | State name after PR creation |
+| `LINEAR_STATE_DONE` | `Done` | State name for completion |
+
+## Notion Integration
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `NOTION_API_KEY` | Yes* | - | Notion Internal Integration Token |
+| `NOTION_DATABASE_ID` | Yes* | - | Single database ID |
+| `NOTION_DATABASE_IDS` | No | - | Multiple databases, comma-separated |
+| `NOTION_POLL_INTERVAL` | No | `5` | Seconds between polling |
+
+*Required if using Notion provider
+
+### Per-Database Repository Paths
+
+When using multiple databases, specify a repository for each:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NOTION_{DB_ID}_REPO` | Yes* | Repository path for database (uppercase, no hyphens) |
+
+*Required when using `NOTION_DATABASE_IDS`
+
+Example: For database ID `2e4f8bda-3c86-8108-ba21-f53fbb73d9ae`, use:
+```bash
+NOTION_2E4F8BDA3C868108BA21F53FBB73D9AE_REPO=/path/to/repo
+```
+
+### Notion Status Values
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NOTION_STATUS_BACKLOG` | `Backlog` | Backlog status name |
+| `NOTION_STATUS_TODO` | `ToDo` | Status that triggers task pickup |
+| `NOTION_STATUS_IN_PROGRESS` | `In Progress` | Status while working |
+| `NOTION_STATUS_IN_REVIEW` | `In Review` | Status after PR creation |
+| `NOTION_STATUS_DONE` | `Done` | Completion status |
 
 ## Repository
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `REPO_PATH` | Yes | - | Absolute path to git repository |
-| `WORKTREES_DIR` | No | `{REPO_PATH}/.worktrees` | Directory for git worktrees |
+| `REPO_PATH` | Yes* | - | Default repository path (single instance) |
+| `GITHUB_TOKEN` | Yes | - | GitHub token for PR creation |
 | `BASE_BRANCH` | No | `main` | Branch to create PRs against |
+
+*Required when using single team/database mode
 
 ## Server
 
@@ -40,7 +96,9 @@ Complete reference of all environment variables supported by Claudear.
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `NGROK_AUTHTOKEN` | No | - | ngrok auth token for tunneling |
+| `NGROK_AUTHTOKEN` | Yes* | - | ngrok auth token for tunneling |
+
+*Required for Linear provider (webhooks need public URL)
 
 ## Task Management
 
@@ -49,67 +107,73 @@ Complete reference of all environment variables supported by Claudear.
 | `MAX_CONCURRENT_TASKS` | No | `5` | Maximum parallel tasks |
 | `COMMENT_POLL_INTERVAL` | No | `30` | Seconds between comment polls |
 | `BLOCKED_TIMEOUT` | No | `3600` | Seconds before blocked task times out |
-| `TASK_TIMEOUT` | No | `7200` | Maximum seconds for a single task |
-
-## Claude Code
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `CLAUDE_MODEL` | No | (default) | Model to use for Claude Code |
-| `CLAUDE_MAX_TOKENS` | No | (default) | Max tokens per response |
 
 ## Database
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `DATABASE_PATH` | No | `claudear.db` | Path to SQLite database |
+| `DB_PATH` | No | `claudear.db` | Path to SQLite database |
 
 ## Logging
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `LOG_LEVEL` | No | `INFO` | Logging level |
-| `LOG_FORMAT` | No | `text` | Log format (`text` or `json`) |
-| `LOG_FILE` | No | - | File to write logs (optional) |
 
-## Example .env File
+## Example: Full Multi-Provider Configuration
 
 ```bash
-# Required
+# =============================================================================
+# LINEAR PROVIDER - Multiple Teams
+# =============================================================================
 LINEAR_API_KEY=lin_api_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 LINEAR_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-LINEAR_TEAM_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-REPO_PATH=/Users/yourname/projects/myapp
+LINEAR_TEAM_IDS=ENG,INFRA,DESIGN
 
-# Optional - Linear States
+# Per-team repositories
+LINEAR_ENG_REPO=/Users/dev/engineering-repo
+LINEAR_INFRA_REPO=/Users/dev/infrastructure-repo
+LINEAR_DESIGN_REPO=/Users/dev/design-system-repo
+
+# Linear workflow states (optional - defaults shown)
 LINEAR_STATE_TODO=Todo
 LINEAR_STATE_IN_PROGRESS=In Progress
 LINEAR_STATE_IN_REVIEW=In Review
 LINEAR_STATE_DONE=Done
 
-# Optional - Server
-WEBHOOK_PORT=8000
+# =============================================================================
+# NOTION PROVIDER - Multiple Databases
+# =============================================================================
+NOTION_API_KEY=secret_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+NOTION_DATABASE_IDS=abc123,def456
+NOTION_POLL_INTERVAL=5
 
-# Optional - ngrok
+# Per-database repositories
+NOTION_ABC123_REPO=/Users/dev/project-alpha-repo
+NOTION_DEF456_REPO=/Users/dev/project-beta-repo
+
+# Notion status values (optional - defaults shown)
+NOTION_STATUS_TODO=ToDo
+NOTION_STATUS_IN_PROGRESS=In Progress
+NOTION_STATUS_IN_REVIEW=In Review
+NOTION_STATUS_DONE=Done
+
+# =============================================================================
+# SHARED SETTINGS
+# =============================================================================
+GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 NGROK_AUTHTOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-# Optional - Task Management
-MAX_CONCURRENT_TASKS=3
-BLOCKED_TIMEOUT=7200
-TASK_TIMEOUT=14400
+# Task settings
+MAX_CONCURRENT_TASKS=5
+BLOCKED_TIMEOUT=3600
 
-# Optional - Logging
+# Server
+WEBHOOK_PORT=8000
+
+# Logging
 LOG_LEVEL=INFO
 ```
-
-## Environment Variable Priority
-
-Variables are loaded in this order (later overrides earlier):
-
-1. System environment variables
-2. `.env` file in current directory
-3. `.env` file in `~/.config/claudear/`
-4. Command-line arguments
 
 ## Security Notes
 

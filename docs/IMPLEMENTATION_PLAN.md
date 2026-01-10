@@ -1,8 +1,8 @@
-# Claudear Implementation Plan
+# Claudear Implementation
 
 ## Overview
 
-Claudear is an autonomous development automation system that bridges Linear project management with Claude Code. When you move a Linear issue to "Todo", Claudear automatically picks it up, creates an isolated git worktree, runs Claude Code to implement the task, and manages the full lifecycle through PR creation.
+Claudear is an autonomous development automation system that bridges Linear project management with Claude Code CLI. When you move a Linear issue to "Todo", Claudear automatically picks it up, creates an isolated git worktree, runs Claude Code to implement the task, and manages the full lifecycle through PR creation.
 
 ---
 
@@ -16,7 +16,7 @@ Claudear is an autonomous development automation system that bridges Linear proj
 │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐      │
 │  │   FastAPI    │    │    Task      │    │    Claude    │      │
 │  │   Webhook    │───>│   Manager    │───>│    Runner    │      │
-│  │   Server     │    │              │    │  (Agent SDK) │      │
+│  │   Server     │    │              │    │  (CLI)       │      │
 │  └──────────────┘    └──────────────┘    └──────────────┘      │
 │         ▲                   │                   │               │
 │         │                   ▼                   ▼               │
@@ -25,6 +25,12 @@ Claudear is an autonomous development automation system that bridges Linear proj
 │  │   Client     │    │   Worktree   │    │    Store     │      │
 │  │  (GraphQL)   │    │   Manager    │    │              │      │
 │  └──────────────┘    └──────────────┘    └──────────────┘      │
+│         │                                                       │
+│         ▼                                                       │
+│  ┌──────────────┐                                               │
+│  │   Label      │  Real-time activity labels on Linear issues   │
+│  │   Manager    │                                               │
+│  └──────────────┘                                               │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
          │                                        │
@@ -37,15 +43,18 @@ Claudear is an autonomous development automation system that bridges Linear proj
 
 ---
 
-## User Choices
+## Key Design Decisions
 
-| Decision | Choice |
-|----------|--------|
-| Language | Python (Claude Agent SDK) |
-| Task Detection | Linear Webhooks |
-| Webhook Tunnel | ngrok |
+| Decision | Implementation |
+|----------|----------------|
+| Language | Python 3.10+ |
+| Claude Integration | Claude Code CLI (uses subscription, not API credits) |
+| Task Detection | Linear Webhooks (real-time) |
+| Webhook Tunnel | ngrok (static domain supported) |
 | Concurrency | Parallel via git worktrees |
 | Runtime | Local machine |
+| Activity Tracking | stream-json output parsing |
+| Configuration | .env file in current working directory |
 
 ---
 
@@ -55,18 +64,21 @@ Claudear is an autonomous development automation system that bridges Linear proj
 1. User moves Linear issue → "Todo"
 2. Linear webhook → Claudear server (via ngrok)
 3. Claudear:
-   - Moves issue → "In Progress"
-   - Creates git worktree + branch
-   - Starts Claude Code session
+   - Applies "In Progress" label to issue
+   - Creates git worktree + branch (claudear/{issue-id})
+   - Starts Claude Code CLI session
 4. Claude works on task
+   - Real-time activity labels (reading, editing, testing, etc.)
    - Progress updates → Linear comments
    - If blocked → Posts comment, waits for response
    - Polls for user comments to unblock
 5. When complete:
    - Pushes to GitHub
-   - Moves issue → "In Review"
    - Creates PR (via `gh` CLI)
+   - Moves issue → "In Review"
 6. User reviews, moves → "Done"
+   - PR auto-merges
+   - Worktree cleaned up
 ```
 
 ---
@@ -82,7 +94,7 @@ claudear/
 ├── claudear/
 │   ├── __init__.py
 │   ├── main.py                 # Entry point
-│   ├── config.py               # Settings from .env
+│   ├── config.py               # Settings from .env (pydantic-settings)
 │   ├── server/
 │   │   ├── __init__.py
 │   │   ├── app.py              # FastAPI app
@@ -92,138 +104,223 @@ claudear/
 │   ├── linear/
 │   │   ├── __init__.py
 │   │   ├── client.py           # GraphQL API wrapper
-│   │   └── models.py           # Pydantic models
+│   │   └── labels.py           # Label management (MajorStateLabel, ActivityLabel)
 │   ├── claude/
 │   │   ├── __init__.py
-│   │   ├── runner.py           # Agent SDK session manager
-│   │   └── hooks.py            # Blocked detection hooks
+│   │   ├── runner.py           # Claude Code CLI execution
+│   │   └── activity.py         # Tool-to-activity mapping
 │   ├── git/
 │   │   ├── __init__.py
 │   │   ├── worktree.py         # Worktree management
-│   │   └── github.py           # PR creation via gh
+│   │   └── github.py           # PR creation via gh CLI
 │   └── tasks/
 │       ├── __init__.py
 │       ├── manager.py          # Orchestration
-│       ├── state.py            # State machine
 │       └── store.py            # SQLite persistence
-└── scripts/
-    ├── setup_ngrok.py          # ngrok tunnel setup
-    └── register_webhook.py     # Linear webhook registration
+└── website/                    # Documentation site (Next.js)
 ```
 
 ---
 
-## Step-by-Step Implementation Plan
+## Module Details
 
-### Step 1: Project Setup
-**Files to create:**
-- `pyproject.toml` - Project configuration and dependencies
-- `.env.example` - Template for environment variables
-- `.gitignore` - Ignore .env, __pycache__, etc.
-- `claudear/__init__.py` - Package init
+### Configuration (config.py)
 
-**Actions:**
-1. Create project structure directories
-2. Define dependencies (fastapi, httpx, pydantic, etc.)
-3. Set up Python virtual environment
+Uses pydantic-settings to load configuration from `.env` file in the current working directory.
 
----
-
-### Step 2: Configuration Module
-**Files to create:**
-- `claudear/config.py` - Settings class using pydantic-settings
-
-**Configuration needed:**
 ```python
-# Linear
-LINEAR_API_KEY
-LINEAR_WEBHOOK_SECRET
-LINEAR_TEAM_ID
-LINEAR_STATE_TODO / IN_PROGRESS / IN_REVIEW / DONE
+class Settings(BaseSettings):
+    # Linear Integration
+    linear_api_key: str
+    linear_webhook_secret: str
+    linear_team_id: str  # Team key (e.g., "ENG") or UUID
 
-# GitHub
-GITHUB_TOKEN
+    # Linear Workflow States
+    linear_state_todo: str = "Todo"
+    linear_state_in_progress: str = "In Progress"
+    linear_state_in_review: str = "In Review"
+    linear_state_done: str = "Done"
 
-# Repository
-REPO_PATH
-WORKTREES_DIR
+    # Repository
+    repo_path: str
+    worktrees_dir: Optional[str] = None  # Defaults to {repo_path}/.worktrees
 
-# Server
-WEBHOOK_PORT
-WEBHOOK_HOST
+    # Server
+    webhook_port: int = 8000
+    webhook_host: str = "0.0.0.0"
 
-# ngrok
-NGROK_AUTHTOKEN
+    # ngrok
+    ngrok_authtoken: str
 
-# Claude
-ANTHROPIC_API_KEY
+    # Task Settings
+    max_concurrent_tasks: int = 5
+    comment_poll_interval: int = 30
+    blocked_timeout: int = 3600
+
+    # Labels
+    labels_enabled: bool = True
+    labels_activity_enabled: bool = True
+    labels_debounce_seconds: float = 2.0
+
+    # Logging
+    log_level: str = "INFO"
+```
+
+**Note:** No `ANTHROPIC_API_KEY` needed - Claudear uses Claude Code CLI which runs on your Claude Code subscription.
+
+---
+
+### Linear Client (linear/client.py)
+
+GraphQL API wrapper for Linear operations.
+
+**Key methods:**
+- `get_team_id()` - Resolves team key to UUID
+- `get_workflow_states()` - Get state name → ID mapping
+- `update_issue_state()` - Move issue to new state
+- `add_comment()` - Add comment to issue
+- `get_issue_comments()` - Fetch comments for polling
+- `create_label()` - Create labels for activity tracking
+- `add_label()` / `remove_label()` - Manage issue labels
+
+---
+
+### Label Management (linear/labels.py)
+
+Real-time visual feedback on Linear issues via labels.
+
+**Label Types:**
+
+```python
+class MajorStateLabel(str, Enum):
+    WORKING = "claudear:working"      # Blue - Claude is active
+    BLOCKED = "claudear:blocked"      # Red - Waiting for human input
+    REVIEW = "claudear:review"        # Yellow - PR created
+    DONE = "claudear:done"            # Green - Completed
+
+class ActivityLabel(str, Enum):
+    READING = "claudear:reading"      # Currently reading files
+    EDITING = "claudear:editing"      # Writing/editing code
+    SEARCHING = "claudear:searching"  # Glob/Grep/WebSearch
+    TESTING = "claudear:testing"      # Running tests (Bash)
+    THINKING = "claudear:thinking"    # Planning/Task tool
+```
+
+**Debouncing:** Activity labels are debounced to prevent excessive API calls. First update is immediate, subsequent updates within the debounce window are skipped.
+
+---
+
+### Claude Runner (claude/runner.py)
+
+Executes Claude Code CLI with streaming JSON output for real-time activity tracking.
+
+**Command construction:**
+```python
+cmd = [
+    "claude",
+    "--print",
+    "--verbose",  # Required for stream-json with --print
+    "--output-format", "stream-json",
+    "--dangerously-skip-permissions",
+]
+```
+
+**Key features:**
+- Streams JSONL output line-by-line
+- Parses `tool_use` events to detect activity
+- Calls `on_tool_use` callback for real-time label updates
+- Captures final result message
+
+**Prompt template:**
+```
+You are working on Linear issue {identifier}: {title}
+
+## Description
+{description}
+
+## Instructions
+1. Analyze the requirements
+2. Implement the solution
+3. Write/update tests as needed
+4. Ensure all tests pass
+5. Commit your changes with a descriptive message
+
+When finished, ensure all changes are committed.
 ```
 
 ---
 
-### Step 3: Linear Client
-**Files to create:**
-- `claudear/linear/__init__.py`
-- `claudear/linear/models.py` - Pydantic models for Linear entities
-- `claudear/linear/client.py` - GraphQL API wrapper
+### Activity Mapping (claude/activity.py)
 
-**Key methods:**
-1. `get_workflow_states(team_id)` - Get state name → ID mapping
-2. `update_issue_state(issue_id, state_name)` - Move issue to new state
-3. `post_comment(issue_id, body)` - Add comment to issue
-4. `get_comments_since(issue_id, timestamp)` - Poll for new comments
+Maps Claude Code tool names to activity labels.
+
+```python
+TOOL_NAME_TO_ACTIVITY: dict[str, ActivityLabel] = {
+    "Read": ActivityLabel.READING,
+    "Glob": ActivityLabel.SEARCHING,
+    "Grep": ActivityLabel.SEARCHING,
+    "Edit": ActivityLabel.EDITING,
+    "Write": ActivityLabel.EDITING,
+    "Bash": ActivityLabel.TESTING,
+    "WebSearch": ActivityLabel.SEARCHING,
+    "Task": ActivityLabel.THINKING,
+}
+```
 
 ---
 
-### Step 4: Git Worktree Manager
-**Files to create:**
-- `claudear/git/__init__.py`
-- `claudear/git/worktree.py` - Worktree operations
+### Git Worktree Manager (git/worktree.py)
+
+Creates isolated working directories for parallel task execution.
 
 **Key methods:**
-1. `create(branch_name, issue_identifier)` - Create new worktree
-2. `remove(issue_identifier)` - Clean up worktree
-3. `list_worktrees()` - List active worktrees
+- `create_worktree()` - Creates worktree with branch `claudear/{issue-id}`
+- `remove_worktree()` - Cleans up worktree and optionally deletes branch
+- `get_worktree_path()` - Returns path for an issue
 
 **Branch naming:** `claudear/{issue-identifier}` (e.g., `claudear/ENG-123`)
 
 ---
 
-### Step 5: GitHub Integration
-**Files to create:**
-- `claudear/git/github.py` - PR creation via gh CLI
+### GitHub Integration (git/github.py)
+
+PR creation and management via `gh` CLI.
 
 **Key methods:**
-1. `push_branch(worktree_path, branch_name)` - Git push
-2. `create_pr(branch_name, title, body, base_branch)` - gh pr create
-3. `link_to_linear(pr_url, issue_identifier)` - Add Linear link to PR body
+- `create_pull_request()` - Creates PR with Linear issue link
+- `merge_pull_request()` - Merges PR when issue moved to Done
+
+**PR format:**
+```markdown
+## Summary
+[Issue title]
+
+## Linear Issue
+Closes {issue-identifier}
+
+---
+🤖 Generated by Claudear
+```
 
 ---
 
-### Step 6: Task State Machine
-**Files to create:**
-- `claudear/tasks/__init__.py`
-- `claudear/tasks/state.py` - TaskState enum and StateMachine class
+### Task Manager (tasks/manager.py)
 
-**States:**
-```
-PENDING → IN_PROGRESS ⟷ BLOCKED → FAILED
-              ↓
-         COMPLETED → IN_REVIEW → DONE
-```
+Central orchestration of the task lifecycle.
 
-**Valid transitions:**
-- PENDING → IN_PROGRESS
-- IN_PROGRESS → BLOCKED, COMPLETED, FAILED
-- BLOCKED → IN_PROGRESS, FAILED
-- COMPLETED → IN_REVIEW
-- IN_REVIEW → DONE, IN_PROGRESS (re-review)
+**Key methods:**
+- `handle_issue_update()` - Process webhook events
+- `start_task()` - Full task initiation flow
+- `check_blocked_tasks()` - Poll for unblock comments
+- `cleanup_task()` - Remove worktree on completion
+
+**Concurrency:** Tracks active tasks, limits to `MAX_CONCURRENT_TASKS`.
 
 ---
 
-### Step 7: Task Store (Persistence)
-**Files to create:**
-- `claudear/tasks/store.py` - SQLite persistence
+### Task Store (tasks/store.py)
+
+SQLite persistence for crash recovery.
 
 **Schema:**
 ```sql
@@ -240,128 +337,17 @@ CREATE TABLE tasks (
 );
 ```
 
-**Key methods:**
-1. `init()` - Create schema
-2. `save_task(task)` - Insert/update task
-3. `get_task(issue_id)` - Retrieve task
-4. `get_blocked_tasks()` - Find blocked tasks for polling
-
 ---
 
-### Step 8: Claude Runner
-**Files to create:**
-- `claudear/claude/__init__.py`
-- `claudear/claude/runner.py` - Agent SDK session manager
-- `claudear/claude/hooks.py` - Custom hooks
+### Webhook Server (server/app.py, server/routes/webhooks.py)
 
-**Key functionality:**
-1. Build prompt from Linear issue (title, description)
-2. Start Claude Agent SDK session with allowed tools
-3. Detect "BLOCKED:" in output → pause, post comment
-4. Detect "TASK_COMPLETE" → mark complete
-5. Resume session with user input after unblock
-
-**Prompt template:**
-```
-You are working on Linear issue {identifier}: {title}
-
-## Description
-{description}
-
-## Instructions
-1. Analyze the requirements
-2. Implement the solution
-3. Write/update tests as needed
-4. Ensure all tests pass
-5. Commit your changes with a descriptive message
-
-If blocked, say: "BLOCKED: [reason]"
-When complete, say: "TASK_COMPLETE"
-```
-
----
-
-### Step 9: Task Manager (Orchestrator)
-**Files to create:**
-- `claudear/tasks/manager.py` - Central orchestration
-
-**Key methods:**
-1. `start_task(issue)` - Full task initiation flow
-2. `handle_blocked(issue, reason)` - Post comment, update state
-3. `handle_unblock(issue_id, comment)` - Resume Claude session
-4. `handle_complete(issue)` - Push, create PR, update Linear
-5. `poll_blocked_comments()` - Background task for unblock detection
-
-**Concurrency:**
-- Track active tasks in dict: `{issue_id: ActiveTask}`
-- Limit concurrent tasks (configurable, default 5)
-- Queue pending tasks when limit reached
-
----
-
-### Step 10: Webhook Server
-**Files to create:**
-- `claudear/server/__init__.py`
-- `claudear/server/app.py` - FastAPI application
-- `claudear/server/routes/__init__.py`
-- `claudear/server/routes/webhooks.py` - Linear webhook endpoint
+FastAPI application receiving Linear webhook events.
 
 **Endpoints:**
 - `POST /webhooks/linear` - Receive Linear events
 - `GET /health` - Health check
 
-**Security:**
-- HMAC-SHA256 signature verification
-- Validate Linear-Signature header
-
-**Webhook handling:**
-1. Verify signature
-2. Parse payload
-3. Check if issue moved to "Todo"
-4. Dispatch to TaskManager.start_task() (background task)
-
----
-
-### Step 11: Main Entry Point
-**Files to create:**
-- `claudear/main.py` - Application startup
-
-**Startup sequence:**
-1. Load configuration
-2. Initialize TaskStore (create DB schema)
-3. Initialize components (LinearClient, WorktreeManager, TaskManager)
-4. Start ngrok tunnel (via pyngrok)
-5. Register webhook with Linear (if not exists)
-6. Start background tasks (comment polling)
-7. Run FastAPI server (uvicorn)
-
----
-
-### Step 12: Setup Scripts
-**Files to create:**
-- `scripts/setup_ngrok.py` - ngrok tunnel helper
-- `scripts/register_webhook.py` - One-time Linear webhook setup
-
-**ngrok setup:**
-```python
-from pyngrok import ngrok
-tunnel = ngrok.connect(8000, "http")
-print(f"Webhook URL: {tunnel.public_url}/webhooks/linear")
-```
-
-**Webhook registration:**
-```graphql
-mutation CreateWebhook($url: String!, $teamId: String!) {
-    webhookCreate(input: {
-        url: $url,
-        teamId: $teamId,
-        resourceTypes: ["Issue"]
-    }) {
-        success
-        webhook { id url }
-    }
-}
-```
+**Security:** HMAC-SHA256 signature verification using `LINEAR_WEBHOOK_SECRET`.
 
 ---
 
@@ -371,43 +357,40 @@ mutation CreateWebhook($url: String!, $teamId: String!) {
 # Linear Integration
 LINEAR_API_KEY=lin_api_xxxxxxxxxxxxx
 LINEAR_WEBHOOK_SECRET=whsec_xxxxxxxxxx
-LINEAR_TEAM_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+LINEAR_TEAM_ID=ENG  # Your team key from URL (linear.app/ENG/...)
 
-# Linear Workflow States (customize to your board)
+# Linear Workflow States (must match your Linear board exactly)
 LINEAR_STATE_TODO=Todo
 LINEAR_STATE_IN_PROGRESS=In Progress
 LINEAR_STATE_IN_REVIEW=In Review
 LINEAR_STATE_DONE=Done
 
-# GitHub
-GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
-
 # Repository
 REPO_PATH=/path/to/your/repo
-WORKTREES_DIR=/path/to/worktrees
 
 # Server
 WEBHOOK_PORT=8000
-WEBHOOK_HOST=0.0.0.0
 
 # ngrok
 NGROK_AUTHTOKEN=xxxxxxxxxxxxxxxxx
 
-# Claude
-ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxx
-
-# Task Settings
+# Task Settings (optional)
 MAX_CONCURRENT_TASKS=5
 COMMENT_POLL_INTERVAL=30
 BLOCKED_TIMEOUT=3600
 
-# Logging
+# Labels (optional)
+LABELS_ENABLED=true
+LABELS_ACTIVITY_ENABLED=true
+LABELS_DEBOUNCE_SECONDS=2.0
+
+# Logging (optional)
 LOG_LEVEL=INFO
 ```
 
 ---
 
-## Dependencies (pyproject.toml)
+## Dependencies
 
 ```toml
 [project]
@@ -426,158 +409,160 @@ dependencies = [
     "python-dotenv>=1.0.0",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.4.0",
-    "pytest-asyncio>=0.23.0",
-    "black>=23.12.0",
-    "ruff>=0.1.9",
-]
-
 [project.scripts]
 claudear = "claudear.main:main"
 ```
 
 ---
 
-## Implementation Phases
-
-### Phase 1: MVP (Steps 1-12)
-- Single task end-to-end flow
-- Basic blocked detection (keyword matching)
-- In-memory task tracking
-- Manual ngrok setup
-
-### Phase 2: Enhanced
-- Concurrent tasks (multiple worktrees)
-- SQLite persistence for crash recovery
-- Session resume after user responds
-- Automatic ngrok tunnel via pyngrok
-- Progress comments to Linear
-
-### Phase 3: Production
-- Advanced blocked detection (hooks, stall detection)
-- Task queue with priority
-- Docker containerization
-- Monitoring dashboard
-- Rate limiting
-
----
-
-## State Machine Diagram
+## State Flow
 
 ```
                             ┌─────────────┐
-                            │   PENDING   │  Issue moved to "Todo"
+                            │    TODO     │  Issue moved to "Todo"
                             └──────┬──────┘
                                    │
                                    ▼ start_task()
                             ┌─────────────┐
                       ┌────>│ IN_PROGRESS │<────┐
+                      │     │  (working)  │     │
                       │     └──────┬──────┘     │
                       │            │            │
            resume()   │            │            │ unblocked
                       │            ▼            │
                       │     ┌─────────────┐     │
                       └─────│   BLOCKED   │─────┘
+                            │   (blocked) │
                             └─────────────┘
                                    │
-                                   │ timeout / give up
+                                   │ complete()
                                    ▼
                             ┌─────────────┐
-                      ┌─────│   FAILED    │
-                      │     └─────────────┘
-                      │
-                      │            │ complete()
-                      │            ▼
-                      │     ┌─────────────┐
-                      │     │  COMPLETED  │
-                      │     └──────┬──────┘
-                      │            │
-                      │            │ push & create PR
-                      │            ▼
-                      │     ┌─────────────┐
-                      └────>│  IN_REVIEW  │
+                            │  IN_REVIEW  │  PR created
+                            │  (review)   │
                             └──────┬──────┘
                                    │
                                    │ user moves to "Done"
                                    ▼
                             ┌─────────────┐
-                            │    DONE     │
+                            │    DONE     │  PR merged, cleanup
+                            │   (done)    │
                             └─────────────┘
 ```
 
+Labels in parentheses show the `MajorStateLabel` applied at each state.
+
 ---
 
-## Blocked Detection Strategies
+## Activity Tracking
 
-### 1. Keyword Matching
-```python
-BLOCKED_PATTERNS = [
-    r"BLOCKED:",
-    r"I need clarification",
-    r"I cannot proceed",
-    r"permission denied",
-    r"access denied",
-]
+When Claude Code is running, Claudear parses the stream-json output to detect tool usage in real-time:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Claude Code CLI (stream-json output)                        │
+│                                                              │
+│  {"type":"tool_use","name":"Read","input":{...}}            │
+│  {"type":"tool_use","name":"Edit","input":{...}}            │
+│  {"type":"tool_use","name":"Bash","input":{...}}            │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+                     ▼ parse JSON, extract tool name
+┌─────────────────────────────────────────────────────────────┐
+│  Activity Mapper                                             │
+│                                                              │
+│  Read → "reading"                                            │
+│  Edit → "editing"                                            │
+│  Bash → "testing"                                            │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+                     ▼ debounced label update
+┌─────────────────────────────────────────────────────────────┐
+│  Linear Issue                                                │
+│                                                              │
+│  Labels: [claudear:working] [claudear:testing]              │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### 2. Tool Output Analysis
-- Check Bash command failures
-- Detect permission errors
-- Notice missing files/dependencies
-
-### 3. Stall Detection
-- No tool activity for 5+ minutes
-- Ask Claude to report status
-
 ---
 
-## Unblock Flow
+## Blocked Detection & Unblock Flow
 
-1. Claude detects blocker, outputs "BLOCKED: [reason]"
-2. TaskManager catches this, posts comment to Linear:
+1. Claude posts comment: "I need help with..."
+2. TaskManager detects blocked state, posts formatted comment:
    ```
    🤖 **Claudear is blocked**
 
-   Reason: [reason]
+   Reason: [reason from Claude]
 
    Please respond with guidance to continue.
    ```
-3. Poll Linear comments every 30 seconds
-4. When new human comment detected:
-   - Transition state: BLOCKED → IN_PROGRESS
+3. Label changes: `working` → `blocked`
+4. Poll Linear comments every 30 seconds
+5. When new human comment detected:
    - Resume Claude session with comment as input
-   - Continue working
+   - Label changes: `blocked` → `working`
 
 ---
 
-## PR Creation Format
+## Installation & Usage
+
+### Prerequisites
+- Python 3.10+
+- [Claude Code](https://claude.ai/code) CLI installed and authenticated
+- [GitHub CLI](https://cli.github.com/) (`gh`) installed and authenticated
+- [ngrok](https://ngrok.com/) account (free tier works)
+- Linear workspace with API access
+
+### Installation
 
 ```bash
-gh pr create \
-  --title "feat(ENG-123): [Issue title]" \
-  --body "## Summary
-Implements [issue title]
+# 1. Clone the repository
+git clone https://github.com/ianborders/claudear.git
+cd claudear
 
-## Linear Issue
-Closes ENG-123
+# 2. Install the claudear command
+pip install claudear
 
-## Changes
-- [Auto-generated from commit messages]
-
----
-🤖 Generated by Claudear" \
-  --base main
+# 3. Create your config
+cp .env.example .env
+# Edit .env with your values
 ```
 
+### Running
+
+```bash
+# Always run from the cloned repo directory
+cd claudear
+claudear
+```
+
+Claudear will:
+1. Start the webhook server
+2. Create an ngrok tunnel
+3. Register the webhook with Linear (first run)
+4. Begin listening for issue updates
+
+### Usage
+
+| Action | Result |
+|--------|--------|
+| Move issue **Backlog → Todo** | Claudear starts working |
+| Claude gets stuck | Posts comment, waits for reply |
+| Reply to comment | Claudear resumes |
+| Task complete | PR created, issue → "In Review" |
+| Move issue → **Done** | PR merges, worktree cleaned up |
+
 ---
 
-## Next Steps After Implementation
+## Finding Your LINEAR_TEAM_ID
 
-1. Create Linear project with Kanban board
-2. Configure workflow states (Todo, In Progress, In Review, Done)
-3. Set up target repository
-4. Fill in .env with API keys
-5. Run `claudear` to start server
-6. Move an issue to "Todo" and watch Claudear work!
+Your team key is the short identifier (2-4 characters) that appears in Linear URLs.
+
+**From any Linear URL:**
+- `linear.app/ENG/issue/ENG-123` → team key is `ENG`
+- `linear.app/CLA/board` → team key is `CLA`
+
+The team key is the segment right after `linear.app/`.
+
+**Note:** You can use either the team key (like `ENG`) or the full UUID. Claudear automatically resolves team keys to UUIDs via the Linear API.

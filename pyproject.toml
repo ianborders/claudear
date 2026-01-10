@@ -1,7 +1,7 @@
 [project]
 name = "claudear"
-version = "0.1.1"
-description = "Autonomous development automation with Claude Code and Linear"
+version = "0.2.12"
+description = "Autonomous development automation with Claude Code, Linear, and Notion"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [

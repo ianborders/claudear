@@ -1,4 +1,8 @@
-"""Main entry point for Claudear."""
+"""Main entry point for Claudear.
+
+Supports both single-provider (backward compatible) and multi-provider modes.
+Auto-detects configuration and routes to appropriate startup path.
+"""
 
 import asyncio
 import atexit
@@ -10,11 +14,6 @@ from typing import Optional
 
 import uvicorn
 
-from claudear.config import get_settings
-
-# Track ngrok tunnel for cleanup
-_ngrok_tunnel = None
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -25,6 +24,9 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+# Track ngrok tunnel for cleanup
+_ngrok_tunnel = None
 
 
 def cleanup_ngrok():
@@ -46,6 +48,7 @@ def setup_ngrok() -> Optional[str]:
     Returns:
         Public URL or None if ngrok not available
     """
+    from claudear.config import get_settings
     global _ngrok_tunnel
     settings = get_settings()
 
@@ -105,6 +108,7 @@ def print_banner():
 
 def validate_config():
     """Validate configuration before starting."""
+    from claudear.config import get_settings
     settings = get_settings()
 
     errors = []
@@ -136,8 +140,41 @@ def validate_config():
     logger.info("Configuration validated successfully")
 
 
-def main():
-    """Main entry point."""
+def detect_multi_provider_mode() -> bool:
+    """Detect if multi-provider configuration is present.
+
+    Returns True if:
+    - Multiple Linear teams configured (LINEAR_TEAM_IDS)
+    - Notion is configured (NOTION_API_KEY)
+    - Multiple Notion databases configured (NOTION_DATABASE_IDS)
+    """
+    import os
+    from pathlib import Path
+    from dotenv import load_dotenv
+
+    # Get .env path from CWD (must use explicit path to avoid find_dotenv() issues)
+    cwd = os.getcwd()
+    env_path = Path(cwd) / ".env"
+
+    # Load .env file with explicit path
+    if env_path.exists():
+        load_dotenv(str(env_path))
+
+    # Check for multi-team Linear
+    if os.getenv("LINEAR_TEAM_IDS"):
+        return True
+
+    # Check for Notion
+    if os.getenv("NOTION_API_KEY"):
+        return True
+
+    return False
+
+
+def main_legacy():
+    """Legacy single-provider (Linear-only) entry point."""
+    from claudear.config import get_settings
+
     print_banner()
 
     # Load and validate settings
@@ -154,15 +191,15 @@ def main():
     # Set up ngrok tunnel
     public_url = setup_ngrok()
     if public_url:
-        print(f"\n📡 Webhook URL: {public_url}/webhooks/linear")
+        print(f"\n Webhook URL: {public_url}/webhooks/linear")
         print("   Register this URL in your Linear webhook settings\n")
     else:
-        print(f"\n⚠️  No ngrok tunnel - webhooks will only work on localhost:{settings.webhook_port}")
+        print(f"\n  No ngrok tunnel - webhooks will only work on localhost:{settings.webhook_port}")
         print(f"   Local webhook URL: http://localhost:{settings.webhook_port}/webhooks/linear\n")
 
-    print(f"📂 Repository: {settings.repo_path}")
-    print(f"🔄 Max concurrent tasks: {settings.max_concurrent_tasks}")
-    print(f"⏱️  Comment poll interval: {settings.comment_poll_interval}s")
+    print(f" Repository: {settings.repo_path}")
+    print(f" Max concurrent tasks: {settings.max_concurrent_tasks}")
+    print(f" Comment poll interval: {settings.comment_poll_interval}s")
     print()
 
     # Run server
@@ -175,6 +212,22 @@ def main():
         reload=False,
         log_level=settings.log_level.lower(),
     )
+
+
+def main_multi_provider():
+    """Multi-provider entry point."""
+    from claudear.unified_main import main as unified_main
+    unified_main()
+
+
+def main():
+    """Main entry point - auto-detects configuration mode."""
+    if detect_multi_provider_mode():
+        logger.info("Multi-provider configuration detected")
+        main_multi_provider()
+    else:
+        logger.info("Single-provider (Linear) configuration detected")
+        main_legacy()
 
 
 if __name__ == "__main__":

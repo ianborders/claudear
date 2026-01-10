@@ -11,13 +11,13 @@ Before installing Claudear, ensure you have the following set up on your system.
 
 ## Required Software
 
-### Python 3.10+
+### Python 3.9+
 
-Claudear requires Python 3.10 or higher.
+Claudear requires Python 3.9 or higher.
 
 ```bash
 python3 --version
-# Should output: Python 3.10.x or higher
+# Should output: Python 3.9.x or higher
 ```
 
 **Installation:**
@@ -85,7 +85,7 @@ git --version
 
 ## Service Accounts
 
-### Linear API Key
+### Linear API Key (if using Linear)
 
 1. Go to Linear Settings → API
 2. Click "Create new API key"
@@ -97,15 +97,36 @@ git --version
 - Read/write comments
 - Read workflow states
 
-### ngrok Account
+### Notion Integration (if using Notion)
 
-ngrok provides a public URL for your local webhook server.
+1. Go to [Notion Integrations](https://www.notion.so/my-integrations)
+2. Click "New integration"
+3. Name it "Claudear"
+4. Select your workspace
+5. Copy the Internal Integration Token (starts with `secret_`)
+
+**After creating the integration:**
+- Open your Notion database
+- Click "..." → "Add connections"
+- Select your Claudear integration
+
+### ngrok Account (if using Linear)
+
+ngrok provides a public URL for your local webhook server. Only required for Linear.
 
 1. Sign up at [ngrok.com](https://ngrok.com)
 2. Go to Your Authtoken
 3. Copy your auth token
 
 **Free tier** is sufficient for personal use.
+
+### GitHub Token
+
+Required for PR creation:
+
+1. Go to GitHub Settings → Developer settings → Personal access tokens
+2. Create a token with `repo` scope
+3. Copy the token (starts with `ghp_`)
 
 ## Repository Requirements
 
@@ -142,12 +163,13 @@ Each concurrent task uses a separate worktree, so disk space scales with `MAX_CO
 ## Network Requirements
 
 - **Outbound HTTPS** to:
-  - `api.linear.app`
+  - `api.linear.app` (if using Linear)
+  - `api.notion.com` (if using Notion)
   - `api.anthropic.com`
   - `api.github.com`
-  - `ngrok.io`
+  - `ngrok.io` (if using Linear)
 
-- **Inbound HTTPS** via ngrok tunnel
+- **Inbound HTTPS** via ngrok tunnel (Linear only)
 
 ## Quick Checklist
 
@@ -168,7 +190,7 @@ gh auth status
 # Git
 git --version
 
-# ngrok (optional - Claudear handles this)
+# ngrok (only for Linear)
 ngrok --version
 ```
 

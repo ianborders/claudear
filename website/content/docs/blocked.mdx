@@ -13,7 +13,7 @@ Sometimes Claude needs your help to continue. This is the "human in the loop" fe
 
 Claude will pause and ask for help when:
 
-- **Missing information** - The issue description is unclear
+- **Missing information** - The task description is unclear
 - **Access issues** - Can't access a file or resource
 - **Design decisions** - Multiple valid approaches exist
 - **Permission errors** - Needs credentials or API keys
@@ -30,8 +30,9 @@ BLOCKED: Need clarification on the authentication flow.
 Should we use JWT tokens or session cookies?
 ```
 
-### 2. Claudear Posts to Linear
+### 2. Claudear Posts a Comment
 
+**On Linear:**
 A comment appears on your Linear issue:
 
 > **Claudear is blocked**
@@ -39,6 +40,9 @@ A comment appears on your Linear issue:
 > Reason: Need clarification on the authentication flow. Should we use JWT tokens or session cookies?
 >
 > Please respond with guidance to continue.
+
+**On Notion:**
+A comment appears on your Notion page with similar content, and the "Blocked" checkbox is set to true.
 
 ### 3. You Respond
 
@@ -53,7 +57,7 @@ Claudear detects your comment and:
 
 1. Sends your response to Claude
 2. Claude continues the task
-3. Issue stays in "In Progress"
+3. Task stays in "In Progress"
 
 ## Best Practices
 
@@ -109,27 +113,39 @@ To adjust the timeout:
 BLOCKED_TIMEOUT=7200  # 2 hours
 ```
 
+## Provider-Specific Notes
+
+### Linear
+
+- Comments appear in the issue activity
+- Claudear filters out its own comments
+- Human comments trigger unblock
+
+### Notion
+
+- Comments appear in the page's comment section
+- "Blocked" checkbox is set to true
+- "Current Status" shows the block reason
+
 ## Monitoring Blocked Tasks
 
-Check blocked tasks:
+Check blocked tasks in logs:
+
+```
+[INFO] Task ENG-123 is blocked: Need API endpoint specification
+[INFO] Waiting for human response...
+```
+
+## Manual Intervention
+
+If the comment polling misses your response, you can:
+
+1. Check the comment was posted correctly
+2. Wait for the next poll cycle (default: 30 seconds)
+3. If still stuck, restart Claudear
+
+To adjust polling frequency:
 
 ```bash
-claudear status --blocked
+COMMENT_POLL_INTERVAL=10  # Check every 10 seconds
 ```
-
-Output:
-```
-Blocked Tasks:
-  ENG-123: Add user authentication (blocked 15m ago)
-           Reason: Need API endpoint specification
-```
-
-## Manual Unblocking
-
-If the polling misses your comment:
-
-```bash
-claudear unblock ENG-123
-```
-
-This forces Claudear to check for new comments and resume.

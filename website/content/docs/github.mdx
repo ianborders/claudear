@@ -7,7 +7,7 @@ order: 9
 
 # GitHub Integration
 
-Claudear automatically creates pull requests when Claude completes a task. This guide explains how PR creation works and how to customize it.
+Claudear automatically creates pull requests when Claude completes a task, regardless of whether the task came from Linear or Notion. This guide explains how PR creation works.
 
 ## How PRs Are Created
 
@@ -15,18 +15,24 @@ When Claude outputs `TASK_COMPLETE`:
 
 1. **Push branch** to origin
 2. **Create PR** via GitHub CLI
-3. **Link to Linear** issue
-4. **Update Linear** state to "In Review"
+3. **Link to task** (Linear issue or Notion page)
+4. **Update status** to "In Review"
 
 ## PR Format
 
 ### Title
 
+**Linear:**
 ```
 feat(ENG-123): Add user authentication
 ```
 
-Format: `{type}({identifier}): {issue title}`
+**Notion:**
+```
+feat(N-ABC123-001): Add user authentication
+```
+
+Format: `{type}({identifier}): {task title}`
 
 Types are inferred from the issue:
 - `feat` - New features
@@ -41,8 +47,8 @@ Types are inferred from the issue:
 ## Summary
 Implements user authentication for the API.
 
-## Linear Issue
-Closes ENG-123
+## Task
+Closes ENG-123  (or links to Notion page)
 
 ## Changes
 - Added JWT token generation
@@ -158,5 +164,5 @@ If PR targets wrong branch:
 If CI fails on the PR:
 
 1. Review the failure
-2. Add a comment on the Linear issue
+2. Add a comment on the task (Linear issue or Notion page)
 3. Claude will see your feedback and fix

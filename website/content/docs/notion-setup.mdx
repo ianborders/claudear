@@ -1,0 +1,216 @@
+---
+title: Notion Setup
+description: Configure Notion databases for Claudear
+section: Setup
+order: 6
+---
+
+# Notion Setup
+
+Claudear integrates with Notion using a polling-based approach. This guide covers setting up Notion databases to work with Claudear.
+
+## How Notion Integration Works
+
+Unlike Linear (which uses webhooks), Notion integration uses polling:
+
+1. Claudear polls your database every N seconds (default: 5)
+2. Detects pages that moved to "Todo" status
+3. Picks up new tasks and starts Claude Code
+4. Updates page properties as work progresses
+
+**Advantages:**
+- No ngrok or public URL needed
+- Simpler setup
+- Works behind firewalls
+
+## 1. Create a Notion Integration
+
+1. Go to [Notion Integrations](https://www.notion.so/my-integrations)
+2. Click **New integration**
+3. Configure:
+   - **Name**: Claudear
+   - **Associated workspace**: Your workspace
+   - **Capabilities**: Read content, Update content, Insert content
+4. Click **Submit**
+5. Copy the **Internal Integration Token** (starts with `secret_`)
+
+## 2. Share Database with Integration
+
+For each database you want Claudear to manage:
+
+1. Open the database in Notion
+2. Click **...** in the top right
+3. Click **Add connections**
+4. Search for and select "Claudear"
+
+## 3. Get Database ID
+
+The database ID is in the URL when viewing the database:
+
+```
+https://notion.so/workspace/abc123def456?v=...
+                          ↑
+                    Database ID
+```
+
+**Tips:**
+- The ID is the 32-character string before `?v=`
+- It may contain hyphens (which are removed in env var names)
+
+## 4. Configure Database Properties
+
+Claudear uses these properties on your Notion database:
+
+### Required Property
+
+| Property | Type | Description |
+|----------|------|-------------|
+| Status | Status/Select | Task status (Todo, In Progress, etc.) |
+
+### Auto-Created Properties
+
+Claudear automatically creates these properties if they don't exist:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| Claudear ID | Text | Unique task identifier (e.g., `N-ABC123-001`) |
+| Branch | Text | Git branch name |
+| PR URL | URL | Pull request link |
+| Current Status | Text | Real-time activity indicator |
+| Blocked | Checkbox | Whether task is blocked |
+
+## 5. Configure Status Values
+
+By default, Claudear looks for these status values:
+
+| Status | Purpose |
+|--------|---------|
+| `ToDo` | Triggers task pickup |
+| `In Progress` | While Claude is working |
+| `In Review` | After PR is created |
+| `Done` | Task complete |
+
+**Customize via environment variables:**
+
+```bash
+NOTION_STATUS_TODO=Todo
+NOTION_STATUS_IN_PROGRESS=Working
+NOTION_STATUS_IN_REVIEW=Review
+NOTION_STATUS_DONE=Complete
+```
+
+## 6. Environment Configuration
+
+### Single Database
+
+```bash
+NOTION_API_KEY=secret_xxxxxxxxxxxxx
+NOTION_DATABASE_ID=abc123def456
+NOTION_POLL_INTERVAL=5
+
+REPO_PATH=/path/to/your/repo
+GITHUB_TOKEN=ghp_xxxxx
+```
+
+### Multiple Databases
+
+```bash
+NOTION_API_KEY=secret_xxxxxxxxxxxxx
+NOTION_DATABASE_IDS=abc123,def456,ghi789
+NOTION_POLL_INTERVAL=5
+
+# Per-database repository paths
+NOTION_ABC123_REPO=/path/to/project-alpha-repo
+NOTION_DEF456_REPO=/path/to/project-beta-repo
+NOTION_GHI789_REPO=/path/to/project-gamma-repo
+
+GITHUB_TOKEN=ghp_xxxxx
+```
+
+## Polling Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NOTION_POLL_INTERVAL` | `5` | Seconds between polls |
+
+**Recommendations:**
+- **5 seconds**: Good for active development
+- **15-30 seconds**: Lower API usage for many databases
+- **60+ seconds**: Minimal polling for low-priority databases
+
+## Troubleshooting
+
+### Tasks Not Being Picked Up
+
+1. **Verify integration access:**
+   - Open database → ... → Add connections → Check Claudear is listed
+
+2. **Check status value matches:**
+   ```bash
+   NOTION_STATUS_TODO=Todo  # Must match exactly (case-sensitive)
+   ```
+
+3. **Verify database ID:**
+   - Check URL carefully
+   - Try both with and without hyphens
+
+### "Unauthorized" Errors
+
+1. **Check API key is valid:**
+   - Regenerate if needed at notion.so/my-integrations
+
+2. **Verify database is shared:**
+   - Each database must explicitly add the integration
+
+### Properties Not Appearing
+
+Claudear creates properties on first task pickup. If they're not appearing:
+
+1. Trigger a task by moving a page to "Todo"
+2. Check Claudear logs for errors
+3. Verify integration has "Update content" capability
+
+### Rate Limiting
+
+If you see rate limit errors:
+
+1. **Increase poll interval:**
+   ```bash
+   NOTION_POLL_INTERVAL=30
+   ```
+
+2. **Reduce concurrent databases**
+
+3. **Check Notion API status:** [status.notion.so](https://status.notion.so)
+
+## Best Practices
+
+### Database Structure
+
+- **Use Status property** (not Select) for better UI
+- **Keep page titles concise** - they become PR titles
+- **Use description for context** - Claude reads page content
+
+### Task Descriptions
+
+Good task descriptions help Claude succeed:
+
+```markdown
+## Goal
+Add a dark mode toggle to the settings page
+
+## Acceptance Criteria
+- Toggle appears in Settings
+- Persists preference in localStorage
+- Uses system preference as default
+
+## Technical Notes
+- Use existing ThemeContext
+- Follow color token pattern in theme.ts
+```
+
+### Monitoring
+
+- Check "Current Status" property for real-time updates
+- "Blocked" checkbox indicates Claude needs help
+- Comments appear on the page when Claude asks questions

@@ -7,7 +7,7 @@ order: 3
 
 # Configuration
 
-Claudear is configured via environment variables in a `.env` file.
+Claudear is configured via environment variables in a `.env` file. It auto-detects which providers to enable based on the variables you configure.
 
 > **Important:** The `.env` file must be in the current working directory when you run `claudear`. Always run the command from the cloned repository folder where your `.env` file is located.
 
@@ -19,17 +19,97 @@ Copy the example configuration and edit it:
 cp .env.example .env
 ```
 
-## Required Variables
+## Single Provider Setup
 
-### Linear Integration
+### Linear (Single Team)
 
-| Variable | Description |
-|----------|-------------|
-| `LINEAR_API_KEY` | Your Linear API key. Get it from Linear Settings → API |
-| `LINEAR_WEBHOOK_SECRET` | Secret for webhook signature verification |
-| `LINEAR_TEAM_ID` | Your team key (e.g., `ENG`, `CLA`) - see [Finding Your Team Key](#finding-your-team-key) |
+```bash
+# Linear Integration
+LINEAR_API_KEY=lin_api_xxxxx
+LINEAR_WEBHOOK_SECRET=whsec_xxxxx
+LINEAR_TEAM_ID=ENG  # Your team key from URL
 
-### Linear Workflow States
+# Repository
+REPO_PATH=/path/to/your/repo
+
+# ngrok (required for webhooks)
+NGROK_AUTHTOKEN=your-ngrok-token
+```
+
+### Notion (Single Database)
+
+```bash
+# Notion Integration
+NOTION_API_KEY=secret_xxxxx
+NOTION_DATABASE_ID=abc123def456
+NOTION_POLL_INTERVAL=5
+
+# Repository
+REPO_PATH=/path/to/your/repo
+
+# GitHub
+GITHUB_TOKEN=ghp_xxxxx
+```
+
+## Multi-Instance Setup
+
+Claudear supports multiple Linear teams and Notion databases, each with its own repository.
+
+### Multiple Linear Teams
+
+```bash
+LINEAR_API_KEY=lin_api_xxxxx
+LINEAR_WEBHOOK_SECRET=whsec_xxxxx
+LINEAR_TEAM_IDS=ENG,INFRA,DESIGN  # Comma-separated team keys
+
+# Per-team repository paths (REQUIRED)
+LINEAR_ENG_REPO=/path/to/engineering-repo
+LINEAR_INFRA_REPO=/path/to/infrastructure-repo
+LINEAR_DESIGN_REPO=/path/to/design-system-repo
+```
+
+### Multiple Notion Databases
+
+```bash
+NOTION_API_KEY=secret_xxxxx
+NOTION_DATABASE_IDS=abc123,def456,ghi789  # Comma-separated database IDs
+NOTION_POLL_INTERVAL=5
+
+# Per-database repository paths (REQUIRED)
+NOTION_ABC123_REPO=/path/to/project-alpha-repo
+NOTION_DEF456_REPO=/path/to/project-beta-repo
+NOTION_GHI789_REPO=/path/to/project-gamma-repo
+```
+
+> **Note:** Database IDs in environment variable names are uppercased and hyphens are removed.
+
+### Both Providers + Multiple Instances
+
+Configure both sets of variables - Claudear runs everything simultaneously:
+
+```bash
+# Linear - Multiple Teams
+LINEAR_API_KEY=lin_api_xxxxx
+LINEAR_WEBHOOK_SECRET=whsec_xxxxx
+LINEAR_TEAM_IDS=ENG,INFRA
+
+LINEAR_ENG_REPO=/path/to/engineering-repo
+LINEAR_INFRA_REPO=/path/to/infrastructure-repo
+
+# Notion - Multiple Databases
+NOTION_API_KEY=secret_xxxxx
+NOTION_DATABASE_IDS=abc123,def456
+NOTION_POLL_INTERVAL=5
+
+NOTION_ABC123_REPO=/path/to/project-alpha-repo
+NOTION_DEF456_REPO=/path/to/project-beta-repo
+
+# Shared
+GITHUB_TOKEN=ghp_xxxxx
+NGROK_AUTHTOKEN=your-ngrok-token
+```
+
+## Linear Workflow States
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -38,110 +118,58 @@ cp .env.example .env
 | `LINEAR_STATE_IN_REVIEW` | `In Review` | State after PR is created |
 | `LINEAR_STATE_DONE` | `Done` | Terminal state (triggers cleanup) |
 
-### Repository
+## Notion Status Values
 
-| Variable | Description |
-|----------|-------------|
-| `REPO_PATH` | Absolute path to your git repository |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NOTION_STATUS_BACKLOG` | `Backlog` | Backlog status |
+| `NOTION_STATUS_TODO` | `ToDo` | Status that triggers task pickup |
+| `NOTION_STATUS_IN_PROGRESS` | `In Progress` | Status while working |
+| `NOTION_STATUS_IN_REVIEW` | `In Review` | Status after PR creation |
+| `NOTION_STATUS_DONE` | `Done` | Terminal status |
 
-## Optional Variables
+## Task Settings
 
-### Server Settings
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MAX_CONCURRENT_TASKS` | `5` | Max parallel tasks across all providers |
+| `COMMENT_POLL_INTERVAL` | `30` | Seconds between polling for comments |
+| `BLOCKED_TIMEOUT` | `3600` | Seconds before a blocked task times out |
+
+## Server Settings
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `WEBHOOK_PORT` | `8000` | Port for the webhook server |
 | `WEBHOOK_HOST` | `0.0.0.0` | Host to bind the server |
 
-### ngrok
-
-| Variable | Description |
-|----------|-------------|
-| `NGROK_AUTHTOKEN` | Your ngrok auth token for tunneling |
-
-### Task Settings
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `MAX_CONCURRENT_TASKS` | `5` | Max parallel tasks |
-| `COMMENT_POLL_INTERVAL` | `30` | Seconds between polling for comments |
-| `BLOCKED_TIMEOUT` | `3600` | Seconds before a blocked task times out |
-
-### Worktrees
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `WORKTREES_DIR` | `{REPO_PATH}/.worktrees` | Directory for git worktrees |
-
-### Logging
+## Logging
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `LOG_LEVEL` | `INFO` | Logging level (DEBUG, INFO, WARNING, ERROR) |
 
-## Example Configuration
+## Getting Your API Keys
 
-```bash
-# .env file
+### Linear API Key
 
-# Linear Integration
-LINEAR_API_KEY=lin_api_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-LINEAR_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-LINEAR_TEAM_ID=ENG  # Your team key from the URL
+1. Go to Linear Settings → API
+2. Click "Create new API key"
+3. Name it "Claudear"
+4. Copy the key (starts with `lin_api_`)
 
-# Workflow States
-LINEAR_STATE_TODO=Todo
-LINEAR_STATE_IN_PROGRESS=In Progress
-LINEAR_STATE_IN_REVIEW=In Review
-LINEAR_STATE_DONE=Done
+### Notion API Key
 
-# Repository
-REPO_PATH=/Users/yourname/projects/myapp
+1. Go to [Notion Integrations](https://www.notion.so/my-integrations)
+2. Create a new integration
+3. Copy the Internal Integration Token (starts with `secret_`)
+4. Share your database with the integration
 
-# ngrok
-NGROK_AUTHTOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+### Finding Your Linear Team Key
 
-# Task Settings
-MAX_CONCURRENT_TASKS=3
-BLOCKED_TIMEOUT=7200
+Your team key is in Linear URLs: `linear.app/ENG/issue/ENG-123` → team key is `ENG`
 
-# Logging
-LOG_LEVEL=INFO
-```
+### Finding Your Notion Database ID
 
-## Getting Your Linear API Key
-
-1. Go to Linear Settings
-2. Navigate to **API** section
-3. Click **Create new API key**
-4. Give it a name like "Claudear"
-5. Copy the key (starts with `lin_api_`)
-
-## Generating a Webhook Secret
-
-Generate a secure random string for your webhook secret:
-
-```bash
-openssl rand -hex 32
-```
-
-Use this value for both `LINEAR_WEBHOOK_SECRET` and when registering the webhook in Linear.
-
-## Finding Your Team Key
-
-Your team key is the short identifier (2-4 characters) that appears in Linear URLs.
-
-**From any Linear URL:**
-
-Look at the URL when viewing your Linear board or any issue:
-- `linear.app/ENG/issue/ENG-123` → team key is `ENG`
-- `linear.app/CLA/board` → team key is `CLA`
-
-The team key is the segment right after `linear.app/`.
-
-**From Team Settings:**
-
-1. Go to Linear Settings → Team Settings
-2. Your team key is displayed at the top
-
-> **Note:** You can use either the team key (like `ENG`) or the full UUID. Claudear automatically resolves team keys to UUIDs.
+Your database ID is in the URL when viewing the database:
+`notion.so/workspace/abc123def456?v=...` → database ID is `abc123def456`
