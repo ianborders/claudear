@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronDown, X } from 'lucide-react';
+import { ChevronDown, X, FileText } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import type { DocSection } from '@/lib/docs';
 
@@ -103,6 +103,20 @@ export function Sidebar({ sections, isOpen, onClose }: SidebarProps) {
               )}
             </div>
           ))}
+
+          {/* LLMs.txt link */}
+          <div className="pt-4 border-t border-gray-200">
+            <a
+              href="/llms.txt"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-md transition-colors"
+            >
+              <FileText className="w-4 h-4" />
+              llms.txt
+              <span className="text-[9px] font-mono text-gray-400 ml-auto">FOR_AI</span>
+            </a>
+          </div>
         </div>
       </nav>
     </>
