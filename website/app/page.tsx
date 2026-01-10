@@ -109,15 +109,6 @@ export default function Home() {
                 <Sparkles className="w-3 h-3" />
                 OPEN_SOURCE
               </div>
-              <a
-                href="https://clotion.dev"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-cyan-500/30 bg-cyan-500/10 text-cyan-600 text-[9px] tracking-[1px] font-mono hover:bg-cyan-500/20 transition"
-              >
-                <ArrowRight className="w-3 h-3" />
-                CLOTION: NOTION + CLAUDE_CODE
-              </a>
             </div>
           </ScaleIn>
           <ScaleIn delay={0.1}>
@@ -143,7 +134,13 @@ export default function Home() {
                   className="h-8 md:h-10 w-auto"
                 />
                 <span className="text-gray-400 text-2xl md:text-3xl">+</span>
-                <span className="text-2xl md:text-3xl font-normal">Notion</span>
+                <Image
+                  src="/notion-logo.svg"
+                  alt="Notion"
+                  width={140}
+                  height={35}
+                  className="h-8 md:h-10 w-auto"
+                />
               </span>
             </h1>
           </ScaleIn>
