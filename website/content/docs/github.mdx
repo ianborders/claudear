@@ -104,24 +104,23 @@ Claudear respects all branch protection rules.
 
 ### Base Branch
 
-By default, PRs target `main`. To change:
-
-```bash
-# In your repo's .claudear config (future feature)
-base_branch: develop
-```
+By default, PRs target `main`. Claudear uses your repository's default branch.
 
 ### PR Template
 
-Claudear uses a built-in template. Custom templates coming soon.
+Claudear uses a built-in template that includes:
+- Summary of changes
+- Link to the originating task
+- List of commits included
 
 ## Auto-Merge
 
-When you move a Linear issue to "Done":
+When you move a task to "Done" (Linear or Notion):
 
 1. Claudear checks PR status
 2. If all checks pass, merges via `gh pr merge`
 3. Cleans up worktree and branch
+4. Updates task status to show "✅ Merged"
 
 ### Merge Strategy
 

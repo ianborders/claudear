@@ -81,22 +81,23 @@ Claudear automatically creates these properties if they don't exist:
 
 ## 5. Configure Status Values
 
-By default, Claudear looks for these status values:
+Claudear auto-detects common status names:
 
-| Status | Purpose |
-|--------|---------|
-| `ToDo` | Triggers task pickup |
-| `In Progress` | While Claude is working |
-| `In Review` | After PR is created |
-| `Done` | Task complete |
+| Status | Recognized Values |
+|--------|-------------------|
+| Todo | `Todo`, `To Do`, `To-Do` |
+| In Progress | `In Progress`, `Working` |
+| In Review | `In Review`, `Review` |
+| Done | `Done`, `Complete`, `Completed` |
 
-**Customize via environment variables:**
+**For custom status names**, use per-database environment variables:
 
 ```bash
-NOTION_STATUS_TODO=Todo
-NOTION_STATUS_IN_PROGRESS=Working
-NOTION_STATUS_IN_REVIEW=Review
-NOTION_STATUS_DONE=Complete
+# Replace ABC123 with your database ID (uppercase, no hyphens)
+NOTION_ABC123_STATUS_TODO=Next Up
+NOTION_ABC123_STATUS_IN_PROGRESS=Working
+NOTION_ABC123_STATUS_IN_REVIEW=Review
+NOTION_ABC123_STATUS_DONE=Shipped
 ```
 
 ## 6. Environment Configuration
@@ -146,9 +147,8 @@ GITHUB_TOKEN=ghp_xxxxx
    - Open database → ... → Add connections → Check Claudear is listed
 
 2. **Check status value matches:**
-   ```bash
-   NOTION_STATUS_TODO=Todo  # Must match exactly (case-sensitive)
-   ```
+   - Claudear auto-detects common names (Todo, In Progress, Done)
+   - For custom names, use `NOTION_{DB}_STATUS_TODO=YourStatus`
 
 3. **Verify database ID:**
    - Check URL carefully

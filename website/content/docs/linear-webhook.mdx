@@ -11,25 +11,22 @@ Claudear uses Linear webhooks to receive real-time notifications when issues cha
 
 > **Note:** This guide is for Linear integration. For Notion setup, see [Notion Setup](/docs/notion-setup).
 
-## Automatic Registration
+## Setup Overview
 
-When you run `claudear` for the first time, it automatically:
+When you run `claudear`, it:
 
-1. Starts an ngrok tunnel
-2. Registers a webhook with Linear
-3. Saves the webhook ID for future use
+1. Starts an ngrok tunnel (if `NGROK_AUTHTOKEN` is set)
+2. Displays the webhook URL to register in Linear
+3. Listens for incoming webhook events
 
 You'll see output like:
 
 ```
 [INFO] ngrok tunnel established: https://abc123.ngrok.io
-[INFO] Registering webhook with Linear...
-[INFO] Webhook registered successfully
+📋 Register this webhook URL in Linear: https://abc123.ngrok.io/webhooks/linear
 ```
 
-## Manual Registration
-
-If automatic registration fails, you can register manually:
+## Registering the Webhook
 
 ### 1. Get Your Webhook URL
 

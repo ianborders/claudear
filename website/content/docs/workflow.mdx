@@ -50,8 +50,8 @@ Then:
 
 Claudear then:
 
-1. Creates a git worktree at `.worktrees/claudear-{identifier}`
-2. Creates branch `claudear/{provider}-{identifier}` (e.g., `claudear/linear-ENG-123`)
+1. Creates a git worktree at `.worktrees/{identifier}`
+2. Creates branch `claudear/{identifier}` (e.g., `claudear/ENG-123` or `claudear/N-ABC123-001`)
 3. Updates task status to "In Progress"
 4. Starts Claude Code session with the task prompt
 
@@ -110,12 +110,12 @@ Tasks from different instances never interfere with each other.
 
 ### Branch Naming
 
-Branches include provider info to prevent conflicts:
+Branches use the task identifier:
 
 | Provider | Example Branch |
 |----------|----------------|
-| Linear | `claudear/linear-ENG-123` |
-| Notion | `claudear/notion-abc123-N-001` |
+| Linear | `claudear/ENG-123` |
+| Notion | `claudear/N-ABC123-001` |
 
 ### Shared Resources
 

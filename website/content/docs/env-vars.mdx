@@ -67,13 +67,16 @@ NOTION_2E4F8BDA3C868108BA21F53FBB73D9AE_REPO=/path/to/repo
 
 ### Notion Status Values
 
+Claudear auto-detects common status names (Todo, In Progress, Done, etc.). For custom status names, use per-database overrides:
+
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `NOTION_STATUS_BACKLOG` | `Backlog` | Backlog status name |
-| `NOTION_STATUS_TODO` | `ToDo` | Status that triggers task pickup |
-| `NOTION_STATUS_IN_PROGRESS` | `In Progress` | Status while working |
-| `NOTION_STATUS_IN_REVIEW` | `In Review` | Status after PR creation |
-| `NOTION_STATUS_DONE` | `Done` | Completion status |
+| `NOTION_{DB}_STATUS_TODO` | `Todo` | Status that triggers task pickup |
+| `NOTION_{DB}_STATUS_IN_PROGRESS` | `In Progress` | Status while working |
+| `NOTION_{DB}_STATUS_IN_REVIEW` | `In Review` | Status after PR creation |
+| `NOTION_{DB}_STATUS_DONE` | `Done` | Completion status |
+
+Replace `{DB}` with the database ID (uppercase, hyphens removed).
 
 ## Repository
 
@@ -81,9 +84,8 @@ NOTION_2E4F8BDA3C868108BA21F53FBB73D9AE_REPO=/path/to/repo
 |----------|----------|---------|-------------|
 | `REPO_PATH` | Yes* | - | Default repository path (single instance) |
 | `GITHUB_TOKEN` | Yes | - | GitHub token for PR creation |
-| `BASE_BRANCH` | No | `main` | Branch to create PRs against |
 
-*Required when using single team/database mode
+*Required when using single team/database mode. PRs are created against the default branch (`main`).
 
 ## Server
 
@@ -152,11 +154,10 @@ NOTION_POLL_INTERVAL=5
 NOTION_ABC123_REPO=/Users/dev/project-alpha-repo
 NOTION_DEF456_REPO=/Users/dev/project-beta-repo
 
-# Notion status values (optional - defaults shown)
-NOTION_STATUS_TODO=ToDo
-NOTION_STATUS_IN_PROGRESS=In Progress
-NOTION_STATUS_IN_REVIEW=In Review
-NOTION_STATUS_DONE=Done
+# Notion status values (optional - auto-detected by default)
+# Use per-database overrides if needed:
+# NOTION_ABC123_STATUS_TODO=Next Up
+# NOTION_ABC123_STATUS_DONE=Complete
 
 # =============================================================================
 # SHARED SETTINGS

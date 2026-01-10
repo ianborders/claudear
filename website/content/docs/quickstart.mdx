@@ -67,7 +67,30 @@ GITHUB_TOKEN=ghp_xxxxxxxxxxxxx
 
 ### Option C: Both Providers
 
-Configure both sets of variables - Claudear will run them simultaneously.
+Run Linear and Notion simultaneously. Configure both sets of variables:
+
+```bash
+# Linear Integration
+LINEAR_API_KEY=lin_api_xxxxxxxxxxxxx
+LINEAR_WEBHOOK_SECRET=your-webhook-secret
+LINEAR_TEAM_ID=ENG
+
+# Notion Integration
+NOTION_API_KEY=secret_xxxxxxxxxxxxx
+NOTION_DATABASE_ID=abc123def456
+NOTION_POLL_INTERVAL=5
+
+# Shared - Single repository for both providers
+REPO_PATH=/path/to/your/repo
+
+# GitHub (for PR creation)
+GITHUB_TOKEN=ghp_xxxxxxxxxxxxx
+
+# ngrok (required for Linear webhooks)
+NGROK_AUTHTOKEN=your-ngrok-token
+```
+
+Claudear auto-detects both providers and runs them simultaneously. Tasks from either Linear or Notion will be picked up and processed.
 
 ## 3. Start Claudear
 

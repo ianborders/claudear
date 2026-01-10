@@ -120,13 +120,16 @@ NGROK_AUTHTOKEN=your-ngrok-token
 
 ## Notion Status Values
 
+Claudear auto-detects common status names. Custom mappings can be configured per-database:
+
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `NOTION_STATUS_BACKLOG` | `Backlog` | Backlog status |
-| `NOTION_STATUS_TODO` | `ToDo` | Status that triggers task pickup |
-| `NOTION_STATUS_IN_PROGRESS` | `In Progress` | Status while working |
-| `NOTION_STATUS_IN_REVIEW` | `In Review` | Status after PR creation |
-| `NOTION_STATUS_DONE` | `Done` | Terminal status |
+| `NOTION_{DB}_STATUS_TODO` | `Todo` | Status that triggers task pickup |
+| `NOTION_{DB}_STATUS_IN_PROGRESS` | `In Progress` | Status while working |
+| `NOTION_{DB}_STATUS_IN_REVIEW` | `In Review` | Status after PR creation |
+| `NOTION_{DB}_STATUS_DONE` | `Done` | Terminal status |
+
+Replace `{DB}` with your database ID (uppercase, hyphens removed). For single-database setups, Claudear uses smart defaults.
 
 ## Task Settings
 

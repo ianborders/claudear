@@ -93,9 +93,8 @@ Solutions to common issues you might encounter with Claudear.
    - Check "Claudear" is listed
 
 2. **Check status value matches:**
-   ```bash
-   NOTION_STATUS_TODO=ToDo  # Must match exactly
-   ```
+   - Claudear auto-detects common names (Todo, In Progress, Done)
+   - For custom names, use `NOTION_{DB}_STATUS_TODO=YourStatus`
 
 3. **Verify database ID:**
    ```bash
