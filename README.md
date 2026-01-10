@@ -4,8 +4,6 @@ Autonomous development automation with Claude Code, Linear, and Notion.
 
 Move a task to "Todo" in Linear or Notion and Claudear takes over — it creates an isolated git worktree, runs Claude Code to implement the work, posts progress updates, and opens a PR when done. Move to "Done" and the PR auto-merges.
 
-[![Clotion](https://img.shields.io/badge/Notion_Support-via_Clotion-black?logo=notion)](https://github.com/ianborders/clotion)
-
 ## Features
 
 - **Multi-Provider**: Works with Linear (webhooks) and Notion (polling)

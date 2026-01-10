@@ -17,24 +17,26 @@ const spaceMono = Space_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://claudear.com"),
-  title: "Claudear - Autonomous Development Automation with Claude Code + Linear",
+  title: "Claudear - Autonomous Development Automation with Claude Code + Linear + Notion",
   description:
-    "Hand off Linear issues to Claude Code. Claudear implements, tests, creates PRs, and manages the full lifecycle. Open source autonomous development automation.",
+    "Hand off Linear issues or Notion tasks to Claude Code. Claudear implements, tests, creates PRs, and manages the full lifecycle. Open source autonomous development automation.",
   keywords: [
     "Claude Code",
     "Linear",
+    "Notion",
     "automation",
     "AI development",
     "autonomous coding",
     "PR automation",
+    "task automation",
   ],
   authors: [{ name: "Ian Borders" }],
   creator: "Ian Borders",
   publisher: "Claudear",
   openGraph: {
-    title: "Claudear - Autonomous Development Automation with Claude Code + Linear",
+    title: "Claudear - Autonomous Development Automation with Claude Code + Linear + Notion",
     description:
-      "Hand off Linear issues to Claude Code. Claudear implements, tests, creates PRs, and manages the full lifecycle.",
+      "Hand off Linear issues or Notion tasks to Claude Code. Claudear implements, tests, creates PRs, and manages the full lifecycle.",
     url: "https://claudear.com",
     siteName: "Claudear",
     type: "website",
@@ -44,15 +46,15 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Claudear - Autonomous Development Automation with Claude Code + Linear",
+        alt: "Claudear - Autonomous Development Automation with Claude Code + Linear + Notion",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Claudear - Autonomous Development Automation with Claude Code + Linear",
+    title: "Claudear - Autonomous Development Automation with Claude Code + Linear + Notion",
     description:
-      "Hand off Linear issues to Claude Code. Claudear implements, tests, creates PRs, and manages the full lifecycle.",
+      "Hand off Linear issues or Notion tasks to Claude Code. Claudear implements, tests, creates PRs, and manages the full lifecycle.",
     site: "https://claudear.com",
     creator: "@OpenMotus",
     images: [
@@ -60,7 +62,7 @@ export const metadata: Metadata = {
         url: "/twitter-image.png",
         width: 1200,
         height: 630,
-        alt: "Claudear - Autonomous Development Automation with Claude Code + Linear",
+        alt: "Claudear - Autonomous Development Automation with Claude Code + Linear + Notion",
       },
     ],
   },
