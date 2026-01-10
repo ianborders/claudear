@@ -1,0 +1,615 @@
+# Claudear Documentation
+# Complete reference for LLMs - All documentation in one file
+# https://github.com/ianborders/claudear
+
+================================================================================
+INTRODUCTION
+================================================================================
+
+Claudear is an open-source autonomous development automation tool that bridges your project management tools with Claude Code. It supports both Linear (via webhooks) and Notion (via polling), letting you manage tasks from whichever platform you prefer.
+
+When you move a task to "Todo" in Linear or Notion, Claudear automatically picks it up, creates an isolated git worktree, runs Claude Code to implement the solution, and manages the full lifecycle through PR creation.
+
+## How It Works
+
+1. Move a task to Todo in Linear or Notion
+2. Claudear receives the event (webhook for Linear, polling for Notion)
+3. A dedicated git worktree and branch are created
+4. Claude Code analyzes the task and implements the solution
+5. If blocked, Claude posts a comment asking for help
+6. When complete, a PR is created and the task moves to "In Review"
+7. Move to "Done" to auto-merge the PR
+
+## Key Features
+
+- Multi-Provider - Works with both Linear and Notion simultaneously
+- Multi-Team/Database - Support multiple Linear teams and Notion databases
+- Per-Project Repos - Each team/database can have its own repository
+- Git Worktrees - Isolated environments for parallel task execution
+- Claude Code CLI - Uses your existing Claude Code subscription
+- Human in the Loop - Claude asks for help when blocked via comments
+- PR Automation - Creates PRs with proper titles and issue links
+- Auto-Merge - Move to "Done" to merge PRs automatically
+- Crash Recovery - SQLite persistence survives restarts
+
+## Provider Comparison
+
+| Feature         | Linear                  | Notion                    |
+|-----------------|-------------------------|---------------------------|
+| Event Model     | Webhooks (instant)      | Polling (configurable)    |
+| Setup           | Requires ngrok          | No ngrok needed           |
+| Multi-Instance  | Multiple teams          | Multiple databases        |
+| Comments        | Full support            | Full support              |
+
+================================================================================
+QUICK START
+================================================================================
+
+## 1. Clone and Install
+
+```bash
+# Clone the repository
+git clone https://github.com/ianborders/claudear.git
+cd claudear
+
+# Install the claudear command
+pip install claudear
+
+# Create your config
+cp .env.example .env
+```
+
+To update: `pip install -U claudear`
+
+## 2. Configure
+
+### Option A: Linear Only
+
+```bash
+LINEAR_API_KEY=lin_api_xxxxxxxxxxxxx
+LINEAR_WEBHOOK_SECRET=your-webhook-secret
+LINEAR_TEAM_ID=ENG
+REPO_PATH=/path/to/your/repo
+NGROK_AUTHTOKEN=your-ngrok-token
+```
+
+### Option B: Notion Only
+
+```bash
+NOTION_API_KEY=secret_xxxxxxxxxxxxx
+NOTION_DATABASE_ID=your-database-id
+NOTION_POLL_INTERVAL=5
+REPO_PATH=/path/to/your/repo
+GITHUB_TOKEN=ghp_xxxxxxxxxxxxx
+```
+
+### Option C: Both Providers
+
+```bash
+LINEAR_API_KEY=lin_api_xxxxxxxxxxxxx
+LINEAR_WEBHOOK_SECRET=your-webhook-secret
+LINEAR_TEAM_ID=ENG
+
+NOTION_API_KEY=secret_xxxxxxxxxxxxx
+NOTION_DATABASE_ID=abc123def456
+NOTION_POLL_INTERVAL=5
+
+REPO_PATH=/path/to/your/repo
+GITHUB_TOKEN=ghp_xxxxxxxxxxxxx
+NGROK_AUTHTOKEN=your-ngrok-token
+```
+
+## 3. Start Claudear
+
+```bash
+cd claudear
+claudear
+```
+
+Important: Always run `claudear` from the cloned repository directory.
+
+================================================================================
+CONFIGURATION
+================================================================================
+
+## Single Provider Setup
+
+### Linear (Single Team)
+
+```bash
+LINEAR_API_KEY=lin_api_xxxxx
+LINEAR_WEBHOOK_SECRET=your-secret
+LINEAR_TEAM_ID=ENG
+REPO_PATH=/path/to/your/repo
+NGROK_AUTHTOKEN=your-ngrok-token
+```
+
+### Notion (Single Database)
+
+```bash
+NOTION_API_KEY=secret_xxxxx
+NOTION_DATABASE_ID=abc123def456
+NOTION_POLL_INTERVAL=5
+REPO_PATH=/path/to/your/repo
+GITHUB_TOKEN=ghp_xxxxx
+```
+
+## Multi-Instance Setup
+
+### Multiple Linear Teams
+
+```bash
+LINEAR_API_KEY=lin_api_xxxxx
+LINEAR_WEBHOOK_SECRET=your-secret
+LINEAR_TEAM_IDS=ENG,INFRA,DESIGN
+
+LINEAR_ENG_REPO=/path/to/engineering-repo
+LINEAR_INFRA_REPO=/path/to/infrastructure-repo
+LINEAR_DESIGN_REPO=/path/to/design-system-repo
+```
+
+### Multiple Notion Databases
+
+```bash
+NOTION_API_KEY=secret_xxxxx
+NOTION_DATABASE_IDS=abc123,def456,ghi789
+NOTION_POLL_INTERVAL=5
+
+NOTION_ABC123_REPO=/path/to/project-alpha-repo
+NOTION_DEF456_REPO=/path/to/project-beta-repo
+NOTION_GHI789_REPO=/path/to/project-gamma-repo
+```
+
+Note: Database IDs in env var names are uppercased with hyphens removed.
+
+## Linear Workflow States
+
+| Variable                   | Default       | Description                    |
+|----------------------------|---------------|--------------------------------|
+| LINEAR_STATE_TODO          | Todo          | Triggers task pickup           |
+| LINEAR_STATE_IN_PROGRESS   | In Progress   | While Claude is working        |
+| LINEAR_STATE_IN_REVIEW     | In Review     | After PR is created            |
+| LINEAR_STATE_DONE          | Done          | Terminal state (triggers merge)|
+
+## Notion Status Values
+
+Claudear auto-detects common status names. Custom mappings can be configured:
+
+| Variable                        | Default       | Description              |
+|---------------------------------|---------------|--------------------------|
+| NOTION_{DB}_STATUS_TODO         | Todo          | Triggers task pickup     |
+| NOTION_{DB}_STATUS_IN_PROGRESS  | In Progress   | While working            |
+| NOTION_{DB}_STATUS_IN_REVIEW    | In Review     | After PR creation        |
+| NOTION_{DB}_STATUS_DONE         | Done          | Terminal status          |
+
+Replace {DB} with database ID (uppercase, hyphens removed).
+
+## Task Settings
+
+| Variable              | Default | Description                          |
+|-----------------------|---------|--------------------------------------|
+| MAX_CONCURRENT_TASKS  | 5       | Max parallel tasks across providers  |
+| COMMENT_POLL_INTERVAL | 30      | Seconds between polling for comments |
+| BLOCKED_TIMEOUT       | 3600    | Seconds before blocked task times out|
+
+## Server Settings
+
+| Variable     | Default   | Description                |
+|--------------|-----------|----------------------------|
+| WEBHOOK_PORT | 8000      | Port for webhook server    |
+| WEBHOOK_HOST | 0.0.0.0   | Host to bind server        |
+
+## Logging
+
+| Variable  | Default | Description                              |
+|-----------|---------|------------------------------------------|
+| LOG_LEVEL | INFO    | Logging level (DEBUG, INFO, WARNING, ERROR) |
+
+================================================================================
+TASK WORKFLOW
+================================================================================
+
+## State Machine
+
+```
+PENDING -> IN_PROGRESS <-> BLOCKED -> FAILED
+                |
+           COMPLETED -> IN_REVIEW -> DONE
+```
+
+### States
+
+| State       | Linear State  | Notion Status | Description                    |
+|-------------|---------------|---------------|--------------------------------|
+| PENDING     | Todo          | Todo          | Task picked up, waiting start  |
+| IN_PROGRESS | In Progress   | In Progress   | Claude actively working        |
+| BLOCKED     | In Progress   | In Progress   | Claude needs human input       |
+| COMPLETED   | In Progress   | In Progress   | Work done, pushing code        |
+| IN_REVIEW   | In Review     | In Review     | PR created, awaiting review    |
+| DONE        | Done          | Done          | Merged and cleaned up          |
+| FAILED      | (varies)      | (varies)      | Task failed (terminal)         |
+
+## Lifecycle Flow
+
+### 1. Task Pickup (PENDING)
+- Linear: Webhook receives state change instantly
+- Notion: Poller detects status change (within poll interval)
+- Task record created in SQLite
+
+### 2. Starting Work (IN_PROGRESS)
+1. Creates git worktree at `.worktrees/{identifier}`
+2. Creates branch `claudear/{identifier}` (e.g., `claudear/ENG-123`)
+3. Updates task status to "In Progress"
+4. Starts Claude Code session
+
+### 3. Working
+Claude Code:
+1. Analyzes task title and description
+2. Explores codebase
+3. Implements solution
+4. Writes/updates tests
+5. Commits changes
+
+Real-time updates:
+- Linear: Label changes
+- Notion: "Current Status" property
+
+### 4. Blocked (BLOCKED)
+1. Claude outputs `BLOCKED: [reason]`
+2. Claudear posts comment asking for help
+3. Polls for new comments
+4. When you reply, Claude resumes
+
+### 5. Completion (COMPLETED -> IN_REVIEW)
+1. Pushes branch to origin
+2. Creates PR via `gh pr create`
+3. Posts PR link to task
+4. Moves task to "In Review"
+
+### 6. Merging (DONE)
+1. PR is merged
+2. Worktree cleaned up
+3. Branch deleted
+4. Task marked DONE
+
+## Branch Naming
+
+| Provider | Example Branch           |
+|----------|--------------------------|
+| Linear   | claudear/ENG-123         |
+| Notion   | claudear/N-ABC123-001    |
+
+================================================================================
+LINEAR WEBHOOK SETUP
+================================================================================
+
+## Setup Overview
+
+When you run `claudear`, it:
+1. Starts an ngrok tunnel (if NGROK_AUTHTOKEN is set)
+2. Displays the webhook URL to register in Linear
+3. Listens for incoming webhook events
+
+Output:
+```
+[INFO] ngrok tunnel established: https://abc123.ngrok.io
+Register this webhook URL in Linear: https://abc123.ngrok.io/webhooks/linear
+```
+
+## Registering the Webhook
+
+1. Start Claudear to get your ngrok URL
+2. Go to Linear Settings -> API -> Webhooks
+3. Click "New webhook"
+4. Configure:
+   - Label: Claudear
+   - URL: https://your-ngrok-url.ngrok.io/webhooks/linear
+   - Team: Select your team
+   - Data change events: Enable "Issues"
+5. Generate a secret: `openssl rand -hex 32`
+6. Enter it in Linear's webhook settings
+7. Add it to your .env: `LINEAR_WEBHOOK_SECRET=your-generated-secret`
+
+## Webhook Events
+
+| Event               | Action                |
+|---------------------|-----------------------|
+| Issue -> Todo       | Start new task        |
+| Issue -> Done       | Trigger cleanup/merge |
+| New Comment         | Check for unblock     |
+
+## Testing
+
+```bash
+curl https://your-ngrok-url.ngrok.io/webhooks/linear/test
+```
+
+Should return: `{"status": "ok", "message": "Webhook endpoint is reachable"}`
+
+================================================================================
+NOTION SETUP
+================================================================================
+
+## How Notion Integration Works
+
+Unlike Linear (webhooks), Notion uses polling:
+1. Claudear polls your database every N seconds (default: 5)
+2. Detects pages that moved to "Todo" status
+3. Picks up new tasks and starts Claude Code
+4. Updates page properties as work progresses
+
+Advantages:
+- No ngrok or public URL needed
+- Simpler setup
+- Works behind firewalls
+
+## Setup Steps
+
+1. Create Notion Integration at notion.so/my-integrations
+2. Share database with integration (... -> Add connections)
+3. Get database ID from URL (32-char string before ?v=)
+4. Configure environment variables
+
+## Database Properties
+
+### Required
+- Status (Status/Select type)
+
+### Auto-Created by Claudear
+- Claudear ID (Text) - e.g., N-ABC123-001
+- Branch (Text)
+- PR URL (URL)
+- Current Status (Text) - real-time activity
+- Blocked (Checkbox)
+
+## Status Values
+
+Claudear auto-detects:
+- Todo: `Todo`, `To Do`, `To-Do`
+- In Progress: `In Progress`, `Working`
+- In Review: `In Review`, `Review`
+- Done: `Done`, `Complete`, `Completed`
+
+For custom names, use per-database env vars:
+```bash
+NOTION_ABC123_STATUS_TODO=Next Up
+NOTION_ABC123_STATUS_DONE=Shipped
+```
+
+================================================================================
+HANDLING BLOCKED TASKS
+================================================================================
+
+Claude pauses and asks for help when:
+- Missing information
+- Access issues
+- Design decisions needed
+- Permission errors
+- Ambiguous requirements
+
+## How It Works
+
+1. Claude outputs: `BLOCKED: [reason]`
+2. Claudear posts a comment on the task
+3. You respond with guidance
+4. Claude resumes
+
+## Best Practices
+
+Be specific:
+```
+Use the existing UserService class in src/services/user.ts.
+The createUser method should validate email format.
+```
+
+Provide examples:
+```
+Follow the pattern in src/api/products.ts for the new endpoint.
+```
+
+Reference files:
+```
+See the auth flow in docs/AUTHENTICATION.md for context.
+```
+
+Avoid:
+- Vague responses like "make it work"
+- Changing requirements mid-task
+- Referencing external docs without summarizing
+
+## Timeout
+
+Default: 1 hour. Configure with BLOCKED_TIMEOUT=7200 (2 hours)
+
+================================================================================
+GITHUB INTEGRATION
+================================================================================
+
+## How PRs Are Created
+
+When Claude outputs `TASK_COMPLETE`:
+1. Push branch to origin
+2. Create PR via GitHub CLI
+3. Link to task (Linear issue or Notion page)
+4. Update status to "In Review"
+
+## PR Format
+
+Title: `{type}({identifier}): {task title}`
+- Linear: `feat(ENG-123): Add user authentication`
+- Notion: `feat(N-ABC123-001): Add user authentication`
+
+Types: feat, fix, refactor, docs, test
+
+## Auto-Merge
+
+When you move a task to "Done":
+1. Claudear checks PR status
+2. If all checks pass, merges via `gh pr merge`
+3. Cleans up worktree and branch
+4. Updates task status to "Merged"
+
+Default merge strategy: Squash merge
+
+================================================================================
+PREREQUISITES
+================================================================================
+
+## Required Software
+
+- Python 3.9+
+- Claude Code CLI (installed and authenticated)
+- GitHub CLI (gh) installed and authenticated
+- Git 2.20+ with worktree support
+- ngrok account (only for Linear)
+
+## Service Accounts
+
+### Linear API Key
+1. Linear Settings -> API
+2. Create new API key named "Claudear"
+3. Copy key (starts with lin_api_)
+
+### Notion Integration
+1. notion.so/my-integrations
+2. Create new integration
+3. Copy Internal Integration Token (starts with secret_)
+4. Share database with integration
+
+### GitHub Token
+1. GitHub Settings -> Developer settings -> Personal access tokens
+2. Create token with `repo` scope
+3. Copy token (starts with ghp_)
+
+## System Requirements
+
+| Resource | Minimum | Recommended |
+|----------|---------|-------------|
+| RAM      | 4 GB    | 8 GB+       |
+| Disk     | 10 GB   | 20 GB+      |
+| CPU      | 2 cores | 4 cores+    |
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+## Linear Issues
+
+### ngrok Tunnel Not Starting
+- Check ngrok auth token: `ngrok config check`
+- Verify NGROK_AUTHTOKEN in .env
+- Test manually: `ngrok http 8000`
+
+### Webhook Events Not Received
+- Verify URL ends with /webhooks/linear
+- Check webhook secret matches
+- Test: `curl https://your-url.ngrok.io/webhooks/linear/test`
+
+## Notion Issues
+
+### Tasks Not Being Picked Up
+- Verify database is shared with integration
+- Check status value matches (Claudear auto-detects common names)
+- Verify database ID is correct
+
+### Unauthorized Errors
+- Regenerate API key at notion.so/my-integrations
+- Verify database is shared with integration
+
+## Task Execution Issues
+
+### Claude Not Starting
+- Check Claude Code CLI: `claude --version`
+- Verify authentication: `claude auth status`
+
+### Worktree Creation Fails
+- Check git status: `git worktree list`
+- Clean up stale worktrees: `git worktree prune`
+
+### Comments Not Detected
+- Increase polling: `COMMENT_POLL_INTERVAL=10`
+
+## Multi-Provider Issues
+
+### Wrong Repository Used
+- Check per-instance repo paths (LINEAR_ENG_REPO, NOTION_ABC123_REPO)
+- Verify startup banner shows correct mappings
+
+### Database Schema Errors
+- Run migration: `python -m claudear.scripts.migrate_db`
+- Or delete and recreate: `rm claudear.db && claudear`
+
+## Getting Help
+
+1. Enable debug logging: `LOG_LEVEL=DEBUG claudear`
+2. Check GitHub Issues: github.com/ianborders/claudear/issues
+
+================================================================================
+ENVIRONMENT VARIABLES REFERENCE
+================================================================================
+
+## Linear
+| Variable               | Required | Default       | Description                    |
+|------------------------|----------|---------------|--------------------------------|
+| LINEAR_API_KEY         | Yes*     | -             | Linear API key                 |
+| LINEAR_WEBHOOK_SECRET  | Yes*     | -             | Webhook signature verification |
+| LINEAR_TEAM_ID         | Yes*     | -             | Single team key (e.g., ENG)    |
+| LINEAR_TEAM_IDS        | No       | -             | Multiple teams, comma-separated|
+| LINEAR_{TEAM}_REPO     | Yes**    | -             | Per-team repository path       |
+
+*Required if using Linear
+**Required when using LINEAR_TEAM_IDS
+
+## Notion
+| Variable               | Required | Default | Description                      |
+|------------------------|----------|---------|----------------------------------|
+| NOTION_API_KEY         | Yes*     | -       | Notion Integration Token         |
+| NOTION_DATABASE_ID     | Yes*     | -       | Single database ID               |
+| NOTION_DATABASE_IDS    | No       | -       | Multiple databases, comma-sep    |
+| NOTION_POLL_INTERVAL   | No       | 5       | Seconds between polling          |
+| NOTION_{DB}_REPO       | Yes**    | -       | Per-database repository path     |
+
+*Required if using Notion
+**Required when using NOTION_DATABASE_IDS
+
+## Repository
+| Variable     | Required | Default | Description              |
+|--------------|----------|---------|--------------------------|
+| REPO_PATH    | Yes*     | -       | Default repository path  |
+| GITHUB_TOKEN | Yes      | -       | GitHub token for PRs     |
+
+*Required for single team/database mode
+
+## Server
+| Variable     | Default   | Description          |
+|--------------|-----------|----------------------|
+| WEBHOOK_PORT | 8000      | Webhook server port  |
+| WEBHOOK_HOST | 0.0.0.0   | Server bind host     |
+
+## ngrok
+| Variable       | Required | Description                    |
+|----------------|----------|--------------------------------|
+| NGROK_AUTHTOKEN| Yes*     | ngrok auth token for tunneling |
+
+*Required for Linear provider
+
+## Task Management
+| Variable              | Default | Description                    |
+|-----------------------|---------|--------------------------------|
+| MAX_CONCURRENT_TASKS  | 5       | Maximum parallel tasks         |
+| COMMENT_POLL_INTERVAL | 30      | Seconds between comment polls  |
+| BLOCKED_TIMEOUT       | 3600    | Blocked task timeout (seconds) |
+
+## Database
+| Variable | Default     | Description           |
+|----------|-------------|-----------------------|
+| DB_PATH  | claudear.db | SQLite database path  |
+
+## Logging
+| Variable  | Default | Description   |
+|-----------|---------|---------------|
+| LOG_LEVEL | INFO    | Logging level |
+
+================================================================================
+END OF DOCUMENTATION
+================================================================================
