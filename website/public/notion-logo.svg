@@ -1,7 +1,7 @@
 <svg version="1.1" id="Layer_1" xmlns:x="ns_extend;" xmlns:i="ns_ai;" xmlns:graph="ns_graphs;" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 230 62.6" style="enable-background:new 0 0 230 62.6;" xml:space="preserve">
  <style type="text/css">
-  .st0{fill:#000000;}
-	.st1{fill-rule:evenodd;clip-rule:evenodd;fill:#000000;}
+  .st0{fill:#FFFFFF;}
+	.st1{fill-rule:evenodd;clip-rule:evenodd;}
  </style>
  <metadata>
   <sfw xmlns="ns_sfw;">
@@ -25,7 +25,7 @@
 			v-24l-3-0.3c-0.2-1.1,0.4-2.7,2.1-2.8l9-0.6l12.4,19V24.3l-3.2-0.4c-0.2-1.3,0.7-2.3,1.9-2.4L49.7,21z M49.7,21">
    </path>
   </g>
-  <g transform="translate(68, 32) scale(1.4) translate(-68, -32)" fill="#000000">
+  <g transform="translate(68, 32) scale(1.4) translate(-68, -32)">
     <path d="M86.5,44.4V27.9h0.3l11.9,16.5h3.8V20.1h-4.2v16.5H98L86.1,20.1h-3.8v24.3H86.5L86.5,44.4z M114.2,44.7
 		c5.5,0,8.8-3.6,8.8-9.6c0-5.9-3.4-9.6-8.8-9.6c-5.5,0-8.8,3.6-8.8,9.6C105.3,41.1,108.7,44.7,114.2,44.7L114.2,44.7z M114.2,41.2
 		c-2.9,0-4.6-2.2-4.6-6.1c0-3.8,1.7-6.1,4.6-6.1c2.9,0,4.6,2.2,4.6,6.1C118.7,39,117.1,41.2,114.2,41.2L114.2,41.2z M126.8,21.5v4.6
