@@ -92,7 +92,7 @@ def print_banner(
 ║ ╚██████╗███████╗██║  ██║╚██████╔╝██████╔╝███████╗██║  ██║██║  ██║  ║
 ║  ╚═════╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝  ║
 ║                                                                    ║
-║   Multi-Provider Autonomous Development Automation                 ║
+║  Multi-Provider Autonomous Development Automation for Claude Code  ║
 ║                                                                    ║
 ╚════════════════════════════════════════════════════════════════════╝{RESET}
 """
